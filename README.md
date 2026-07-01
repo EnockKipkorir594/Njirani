@@ -7,5 +7,5 @@ into our platform. They are also rated based on the job they did increasing thei
 their chances to get picked by clients. This one way of ensuring quality service is being provided. 
 
 ## What Problems does Njirani solve? 
-It brideges the the gap for need for service by estate members and need for jobs by services providers. 
-It ensures accoutability and quality service by service providers through online rating and comments. 
+- It brideges the the gap for need for service by estate members and need for jobs by services providers. 
+- It ensures accoutability and quality service by service providers through online rating and comments. 
