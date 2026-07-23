@@ -50,7 +50,7 @@ async function main() {
         process.exit(1);
     }
 
-    if (isNaN(num1)  || !operator || isNaN(num2)){
+    if (!num1 || !operator || !num2){
         console.error("Invalid numbers");
         process.exit(1);
     }
