@@ -1,0 +1,16 @@
+[
+  {
+    "num1": 10,
+    "operator": "*",
+    "num2": 5,
+    "result": 50,
+    "timestamp": "2026-07-23T12:19:32.849Z"
+  },
+  {
+    "num1": 10,
+    "operator": "+",
+    "num2": 5,
+    "result": 15,
+    "timestamp": "2026-07-23T12:19:42.614Z"
+  }
+]
