@@ -18,7 +18,8 @@ interface WeatherResponse {
 }
 
 async function main(){
-    const city = "Kericho";
+
+    const city = process.argv[2] || "London";
     const apiKey = process.env.OpenWeather_APIKey;
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
     const response = await fetch(url);
