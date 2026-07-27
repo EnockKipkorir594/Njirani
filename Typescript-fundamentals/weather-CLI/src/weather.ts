@@ -69,6 +69,26 @@ function displayWeather ( city: string, newWeather: CachedWeather, isCached : Bo
 
 }
 
+function handleHttpError( status: number): void {
+    //Erro handling logic 
+    if (status === 401) {
+        console.error("Invalid API Key. Check your .env file. ");
+
+    }
+
+    else if(status === 404){
+
+        console.error("City not found. Check spelling or try a different city.");
+    }
+    else if (status === 429){
+        console.error("Too many requests. Wait a few minutes.");
+    }
+    else {
+        console.error(`Error: ${status}`);
+    }
+    process.exit(1);
+}
+
 
 async function main(){
     
@@ -86,29 +106,38 @@ async function main(){
     }
     const apiKey = process.env.OpenWeather_APIKey;
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
-    const response = await fetch(url);
 
-    if (!response.ok){
-        console.log(`Error: ${response.status} ${response.statusText}`);
-        return ;
-    }
+     try{
+        const response = await fetch(url);
+        if (!response.ok){
+            handleHttpError(response.status);
+            
+        }
 
-    const data: WeatherResponse = await response.json();
+        const data: WeatherResponse = await response.json();
 
-    const newWeather : CachedWeather = {
+        const newWeather : CachedWeather = {
         temp : data.main.temp,
         condition : data.weather[0]?.description || "unknown",
         humidity : data.main.humidity,
         windSpeed : data.wind.speed,
         fetchedAt : new Date().toISOString()
+        }
+
+        cache[city] = newWeather;
+        saveCache(cache);
+
+
+        displayWeather(city , newWeather, false);
+
+
+
+    }catch (err){
+        console.error("Network error. Check your internet connecion");
+        console.error(err);
+        process.exit(1);
+
     }
-
-    cache[city] = newWeather;
-    saveCache(cache);
-
-
-    displayWeather(city , newWeather, false);
-   
 
 
 }
