@@ -33,6 +33,16 @@ interface WeatherCache {
 
 }
 
+interface ForecastResponse {
+    list : Array<{
+        dt_txt: string;
+        main : { temp: number; humidity : number};
+        weather : Array<{description: string}>;
+    }>;
+}
+
+
+
 function loadCache() : WeatherCache {
     try{
         const data = readFileSync('weather.json', 'utf-8');
@@ -47,7 +57,7 @@ function loadCache() : WeatherCache {
 }
 
 function saveCache( cache: WeatherCache): void {
-    writeFileSync("weather.json", JSON.stringify(cache, null , 2));
+    writeFileSync("weather.json", JSON.stringify(cache, null, 2));
 }
 
 function displayWeather ( city: string, newWeather: CachedWeather, isCached : Boolean): void{
@@ -89,20 +99,70 @@ function handleHttpError( status: number): void {
     process.exit(1);
 }
 
+function displayForecast(city : string, data: ForecastResponse): void {
+    console.log(`----------------------------------------`);
+    console.log(`   3-Day weather Forecast for ${city}`);
+    console.log(`----------------------------------------`);
+    console.log();
+
+    const noonEntries  = data.list.filter( entry =>  entry.dt_txt.includes("12:00:00"));
+    const threeDays = noonEntries.slice(0,3);
+    
+    for (const entry of threeDays){
+        const date = entry.dt_txt.split(" ")[0];
+
+        console.log(`Date: ${date}`);
+        console.log(`   Temperature : ${entry.main.temp}C`);
+        console.log(`   Condition : ${entry.weather[0]?.description}`);
+        console.log(`   Humidity : ${entry.main.humidity}`);
+        console.log();
+
+    }
+
+    console.log(`----------------------------------------`);
+    
+}
+
 
 async function main(){
     
     const args = process.argv.slice(2);
+    
     if (args.length === 0) {
-        console.error("Usage: weather <city>")
+        console.error("Usage: weather <city>");
         process.exit(1);
     }
-    const city = args[0] || "London";
-    const cache = loadCache();
-    if (cache[city]) {
-        displayWeather(city , cache[city], true);
-        return;  // Done — no API call needed
+    
+        //fetch weather data 
 
+    let isForecast = false;
+    let  city : string;
+    if (args[0] === "--forecast"){
+        isForecast = true ;
+        city  = args[1] as string;
+    }else {
+        isForecast = false ;
+        city = args[0] as string ;
+        }
+    
+    if (!city){
+        console.error("Usage: weather [--forecast] <city>");
+        process.exit(1);
+        }
+    
+    if (isForecast){
+            //fetch forecast 
+    }else {
+            //fetch current weather
+        }
+    
+    const cache = loadCache();
+    const cached = cache[city];
+
+    if (!isForecast && cached) {
+        displayWeather(city, cached,  true);
+        return;  // Done — no API call needed
+    
     }
     const apiKey = process.env.OpenWeather_APIKey;
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
