@@ -123,6 +123,70 @@ function displayForecast(city : string, data: ForecastResponse, units: string): 
     
 }
 
+function loadFavorites() : string[] {
+    try {
+        const data = readFileSync('favorites.json', 'utf-8');
+        return JSON.parse(data);
+    }catch {
+        return [];
+    }
+}
+
+function saveFavorites( favorites : string[]):void {
+    writeFileSync('favorites.json', JSON.stringify(favorites, null , 2));
+}
+
+async function fetchCurrentWeather(city : string , units: string): Promise< CachedWeather | null>{
+    const apiKey = process.env.OpenWeather_APIKey;
+    if (!apiKey){
+        console.error("API key not found");
+        return null;
+    }
+
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=${units}` 
+     try{
+        const response = await fetch(url);
+        if (!response.ok){
+            handleHttpError(response.status);
+            return null;
+            
+        }
+
+        const data: WeatherResponse = await response.json();
+
+        return {
+        temp : data.main.temp,
+        condition : data.weather[0]?.description || "unknown",
+        humidity : data.main.humidity,
+        windSpeed : data.wind.speed,
+        fetchedAt : new Date().toISOString()
+        }
+    }catch (err){
+        console.error(`Network error for ${city}`);
+        return null;
+    }
+
+}
+
+async function fetchForecast(city: string, units: string): Promise < ForecastResponse | null > {
+    const apiKey = process.env.OpenWeather_APIKey;
+    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=${units}`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok){
+            handleHttpError(response.status);
+            return null ;
+
+        }
+        return await response.json();
+    }catch (err){
+        console.error(`Network error for ${city}`);
+        return null; 
+    }
+
+
+}
+
 
 async function main(){
     
@@ -138,6 +202,8 @@ async function main(){
     let isForecast = false;
     let units = "metric";
     let  city = "";
+    let isSave = false;
+    let isFavorite = false;
 
     for (let i = 0; i < args.length; i++){
 
@@ -149,6 +215,12 @@ async function main(){
              units = args[i + 1] || "";
              i++;
         }
+        else if (arg === "--save"){
+            isSave = true;
+        }
+        else if (arg === "--favorites"){
+            isFavorite = true;
+        }
        
         else {
             city = arg || "";
@@ -156,11 +228,54 @@ async function main(){
            
     }
     
+    if (isSave){
     
-    if (!city){
-        console.error("Usage: weather [--forecast] <city>");
-        process.exit(1);
+        if (!city){
+            console.error("Usage: weather [--forecast] <city>");
+            process.exit(1);
+         }
+
+         const favorites = loadFavorites();
+         if (favorites.includes(city)){
+
+            console.log(`${city} is already in favorites`);
+            return ;
+         }
+
+         favorites.push(city);
+         saveFavorites(favorites);
+         console.log(`Saved ${city} to favorites`);
+         return;
+    }
+
+    if (isFavorite){
+        const favorites = loadFavorites();
+
+        if (favorites.length === 0){
+            console.log('No favorites saved');
+            return ;
         }
+        if (!isForecast && args.length === 1){
+            console.log('Favorite cities:')
+            for (const fav of favorites){
+                console.log(`   -${fav}`);
+            }
+            return ;
+        }
+
+        for (const fav of favorites){
+            if (isForecast){
+                const data  = await fetchForecast(fav, units);
+                if (data) displayForecast(fav, data, units);
+            }
+            else{
+                const weather = await fetchCurrentWeather(fav, units);
+                if (weather) displayWeather(fav, weather, false, units);
+             }
+
+        }
+        return ;
+    }
     
     const cache = loadCache();
     const cached = cache[city];
@@ -189,7 +304,7 @@ async function main(){
         try{
             const response = await fetch(url);
             if (!response.ok){
-                handleHttpError(response.status);
+                console.error(`Error ${response.status} for ${city}`);
                 return;
             }
 
