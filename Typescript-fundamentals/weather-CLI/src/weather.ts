@@ -150,23 +150,45 @@ async function main(){
         process.exit(1);
         }
     
-    if (isForecast){
-            //fetch forecast 
-    }else {
-            //fetch current weather
-        }
-    
     const cache = loadCache();
     const cached = cache[city];
 
     if (!isForecast && cached) {
         displayWeather(city, cached,  true);
-        return;  // Done — no API call needed
+         // Done — no API call needed
     
     }
     const apiKey = process.env.OpenWeather_APIKey;
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
 
+    if (!apiKey) {
+        console.error("API key not found. Check .env file.");
+        process.exit(1);
+    }
+
+    if (isForecast){
+        const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`;
+        try{
+            const response = await fetch(url);
+            if (!response.ok){
+                handleHttpError(response.status);
+                return;
+            }
+
+            const data : ForecastResponse = await response.json();
+            displayForecast(city, data);
+        }catch (err){
+            console.error("Network error. Check your internet connection");
+            console.error(err);
+            process.exit(1);
+        }
+    
+       
+    }else {
+
+        const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+            
+        
+    
      try{
         const response = await fetch(url);
         if (!response.ok){
@@ -198,7 +220,8 @@ async function main(){
         process.exit(1);
 
     }
-
+    
+}   
 
 }
 
