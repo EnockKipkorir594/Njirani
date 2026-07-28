@@ -60,15 +60,15 @@ function saveCache( cache: WeatherCache): void {
     writeFileSync("weather.json", JSON.stringify(cache, null, 2));
 }
 
-function displayWeather ( city: string, newWeather: CachedWeather, isCached : Boolean): void{
-
+function displayWeather ( city: string, newWeather: CachedWeather, isCached : Boolean, units: string): void{
+    const symbol = units === "imperial" ? "°F" : "°C";
     const source = isCached ? "cache" : "Live API";
 
     console.log("------------------------------");
     console.log(`   Weather for ${city}`);
     console.log("------------------------------");
     console.log();
-    console.log(`   Temperature : ${newWeather.temp}`);
+    console.log(`   Temperature : ${newWeather.temp}${symbol}`);
     console.log(`   Condition : ${newWeather.condition}`);
     console.log(`   Humidity : ${newWeather.humidity}`);
     console.log(`   WindSpeed : ${newWeather.windSpeed}`);
@@ -99,12 +99,12 @@ function handleHttpError( status: number): void {
     process.exit(1);
 }
 
-function displayForecast(city : string, data: ForecastResponse): void {
+function displayForecast(city : string, data: ForecastResponse, units: string): void {
     console.log(`----------------------------------------`);
     console.log(`   3-Day weather Forecast for ${city}`);
     console.log(`----------------------------------------`);
     console.log();
-
+    const symbol = units === "imperial" ? "°F" : "°C";
     const noonEntries  = data.list.filter( entry =>  entry.dt_txt.includes("12:00:00"));
     const threeDays = noonEntries.slice(0,3);
     
@@ -112,7 +112,7 @@ function displayForecast(city : string, data: ForecastResponse): void {
         const date = entry.dt_txt.split(" ")[0];
 
         console.log(`Date: ${date}`);
-        console.log(`   Temperature : ${entry.main.temp}C`);
+        console.log(`   Temperature : ${entry.main.temp}${symbol}`);
         console.log(`   Condition : ${entry.weather[0]?.description}`);
         console.log(`   Humidity : ${entry.main.humidity}`);
         console.log();
@@ -136,14 +136,26 @@ async function main(){
         //fetch weather data 
 
     let isForecast = false;
-    let  city : string;
-    if (args[0] === "--forecast"){
-        isForecast = true ;
-        city  = args[1] as string;
-    }else {
-        isForecast = false ;
-        city = args[0] as string ;
+    let units = "metric";
+    let  city = "";
+
+    for (let i = 0; i < args.length; i++){
+
+        const arg = args[i];
+        if (arg === "--forecast"){
+            isForecast = true ;
         }
+        else if (arg === "--units"){
+             units = args[i + 1] || "";
+             i++;
+        }
+       
+        else {
+            city = arg || "";
+        }
+           
+    }
+    
     
     if (!city){
         console.error("Usage: weather [--forecast] <city>");
@@ -154,10 +166,17 @@ async function main(){
     const cached = cache[city];
 
     if (!isForecast && cached) {
-        displayWeather(city, cached,  true);
+        displayWeather(city, cached,  true, units);
+        return ;
          // Done — no API call needed
     
     }
+
+    if (!["metric", "imperial"].includes(units)) {
+        console.error("Usage: --units metric|imperial");
+        process.exit(1);
+    }
+
     const apiKey = process.env.OpenWeather_APIKey;
 
     if (!apiKey) {
@@ -166,7 +185,7 @@ async function main(){
     }
 
     if (isForecast){
-        const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`;
+        const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=${units}`;
         try{
             const response = await fetch(url);
             if (!response.ok){
@@ -175,7 +194,7 @@ async function main(){
             }
 
             const data : ForecastResponse = await response.json();
-            displayForecast(city, data);
+            displayForecast(city, data, units);
         }catch (err){
             console.error("Network error. Check your internet connection");
             console.error(err);
@@ -185,7 +204,7 @@ async function main(){
        
     }else {
 
-        const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+        const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=${units}`;
             
         
     
@@ -210,7 +229,7 @@ async function main(){
         saveCache(cache);
 
 
-        displayWeather(city , newWeather, false);
+        displayWeather(city , newWeather, false, units);
 
 
 
