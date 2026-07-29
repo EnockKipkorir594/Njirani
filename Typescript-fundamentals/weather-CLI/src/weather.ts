@@ -350,7 +350,9 @@ async function main(){
 
     }catch (err){
         console.error("Network error. Check your internet connecion");
+
         console.error(err);
+        
         process.exit(1);
 
     }
