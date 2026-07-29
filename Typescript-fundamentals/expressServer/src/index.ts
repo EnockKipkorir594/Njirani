@@ -9,16 +9,24 @@ const port = 3000;
 //Global middleware 
 app.use(express.json());
 
+const users = [
+    {id: 1, name: "Enock"},
+    {id :2, name: "Mariah"}
+];
 //routes
 app.get('/', (req, res) => {
     res.send('Hello Express');
 });
 app.get('/health', (req, res) => {
-    res.json({status : 'ok'});
+    res.json({status : 'ok'})
 });
+app.get('/users', (req, res) => {
+    res.status(200).json(users);
+})
 app.post('/echo', (req, res) => {
     res.json(req.body);
 });
+
 
 
 //Zod schema instad of using interface 
@@ -47,10 +55,8 @@ function validateBody(schema : z.ZodSchema){
         
     }
 }
-const users = [
-    {id: 1, name: "Enock"},
-    {id :2, name: "Mariah"}
-]
+
+
 //Implementing Zod validation middleware
 app.post('/users',validateBody(createUserSchema), (req, res) => {
     const newUser = {
@@ -72,7 +78,7 @@ app.use(( req,res,next) => {
     next(error)
 }) 
 
-//Error handling middleware 
+//Error handling middleware 500
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     const status = err.status  || 500;
     const message = err.message || "Internal server error";
