@@ -41,7 +41,7 @@ const createUserSchema = z.object({
 function validateBody(schema : z.ZodSchema){
     return (req: Request,res: Response, next: NextFunction) => {
         const result = schema.safeParse(req.body);
-
+        //If validation fails retrun an error message
         if (!result.success){
             const error = new Error('Validation Error');
             (error as any).status = 400;
