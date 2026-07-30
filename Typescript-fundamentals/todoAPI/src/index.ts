@@ -44,11 +44,30 @@ function validateBody(schema: z.ZodSchema){
     }
 }
 
-
+//implementing filtering and sorting 
 //get todos route 
 app.get('/todos', async ( req , res) => {
 
-    const result = await pool.query("SELECT * FROM todos");
+    const {status, sort = "created_at", order = "desc"} = req.query;
+
+    let query = "SELECT * FROM todos";
+    const params: any[] = [];
+    const conditions: string[] = [];
+
+    if(status){
+        conditions.push(`status = $${params.length + 1}`);
+        params.push(status as string);
+    }
+
+    if (conditions.length > 0){
+        query += " WHERE " + conditions.join(" AND ");
+    }
+
+    const validSort = ["created_at", "updated_at", "title"].includes(sort as string) ?sort: "created_at";
+    const validOrder = order === "asc" ? "ASC" : "DESC";
+    query += ` ORDER BY ${validSort} ${validOrder}`;
+
+    const result = await pool.query(query, params);
     res.json(result.rows);
 
 });
