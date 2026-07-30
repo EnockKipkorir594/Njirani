@@ -15,7 +15,14 @@ const todoSchema  = z.object ({
     title: z.string().min(1),
     description: z.string().optional(),
     status: z.enum(['pending', 'in-progress', 'done']).optional()
-});
+}).strict();
+
+//updateTodoSchema for PUT 
+const updateTodoSchema  = z.object ({
+    title: z.string().min(1).optional(),
+    description: z.string().optional(),
+    status: z.enum(['pending', 'in-progress', 'done']).optional()
+}).strict();
 
 //Validation body using zod
 
@@ -48,7 +55,12 @@ app.get('/todos', async ( req , res) => {
 
 //get todo by id route 
 app.get('/todos/:id', async (req , res) => {
-    const { id } = req.params;
+    const  id  = parseInt(req.params.id);
+
+    if (isNaN(id)){
+        res.status(400).json({ error: "Invalid id "});
+        return;
+    }
 
     const result = await pool.query("SELECT * FROM todos where id = $1", [id]);
 
@@ -72,7 +84,7 @@ app.post('/todos', validateBody(todoSchema) , async(req, res) => {
  });
 
  //PUT todos route (update a todo)
- app.put('/todos/:id', validateBody(todoSchema), async(req, res) => {
+ app.put('/todos/:id', validateBody(updateTodoSchema), async(req, res) => {
     const { id } = req.params;
     const { title, description, status } = req.body ;
 
