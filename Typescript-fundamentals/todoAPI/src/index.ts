@@ -7,17 +7,17 @@ import { z } from "zod";
 const app = express()
 const PORT = 3000
 
-//Global middleware
+//Global middleware(body parsing middleware)
 app.use(express.json())
 
-//todoSchema using zod 
+//todoSchema using zod (input validation)
 const todoSchema  = z.object ({
     title: z.string().min(1),
     description: z.string().optional(),
     status: z.enum(['pending', 'in-progress', 'done']).optional()
-}).strict();
+}).strict();//ensures no extra fields are passed
 
-//updateTodoSchema for PUT 
+//updateTodoSchema for the  PUT Method
 const updateTodoSchema  = z.object ({
     title: z.string().min(1).optional(),
     description: z.string().optional(),
@@ -25,15 +25,14 @@ const updateTodoSchema  = z.object ({
 }).strict();
 
 //Validation body using zod
-
 function validateBody(schema: z.ZodSchema){
     return (req: Request, res: Response, next: NextFunction) => {
         const result = schema.safeParse(req.body);
 
         if(!result.success){
             const error = new Error('Validation Error');
-            (error as any ).status = 400;
-            (error as any ).details = result.error.issues;
+            ( error as any ).status = 400;
+            ( error as any ).details = result.error.issues;
             next(error);
             return;
         }
@@ -47,8 +46,8 @@ function validateBody(schema: z.ZodSchema){
 //implementing filtering and sorting 
 //get todos route 
 app.get('/todos', async ( req , res) => {
-
-    const {status, sort = "created_at", order = "desc"} = req.query;
+    //filterign logic 
+    const {status, sort = "created_at", order = "desc", page = "1", limit = "10"} = req.query;
 
     let query = "SELECT * FROM todos";
     const params: any[] = [];
@@ -67,8 +66,39 @@ app.get('/todos', async ( req , res) => {
     const validOrder = order === "asc" ? "ASC" : "DESC";
     query += ` ORDER BY ${validSort} ${validOrder}`;
 
+    //pagination logic
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+
+    if (isNaN(pageNum) || pageNum < 1){
+        res.status(400).json({ error: "Page must be a positive number"});
+        return;
+    }
+    if (isNaN(limitNum) || limitNum > 100){
+        res.status(400).json({ error: "Limit must be betwen 1 and 100 "});
+        return;
+    }
+
+    const offset = (pageNum - 1) * limitNum ;
+
+    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+
     const result = await pool.query(query, params);
-    res.json(result.rows);
+
+    //Get total count of metadata
+    const countResult = await pool.query('SELECT COUNT(*) FROM  todos');
+    const total = parseInt(countResult.rows[0].count);
+    res.json({
+        data: result.rows,
+        meta:{
+            total,
+            page: parseInt(page as string),
+            limit : parseInt(limit as string),
+            totalPages: Math.ceil(total / parseInt(limit as string))
+        }
+    });
 
 });
 
