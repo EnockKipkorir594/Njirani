@@ -1,6 +1,6 @@
 import express from "express";
 import { config }  from  "dotenv";
-import prisma from "./config/database";
+import prisma from "./config/database.js";
 
 config()
 //initialize the app instance 
@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
 });
 
 //GET /heaalth route
-app.use('/health', async(req,res) => {
+app.get('/health', async(req,res) => {
     try{
         
         await prisma.$queryRaw`SELECT 1`
