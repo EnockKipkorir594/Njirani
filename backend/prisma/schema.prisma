@@ -1,0 +1,195 @@
+// ─── Generator ─────────────────────────────────────────────────────
+// `prisma-client-js` is the standard Node.js client.
+// `output` puts the generated client inside src/generated/prisma so
+// we can import it with path aliases later.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+// ─── Datasource ───────────────────────────────────────────────────
+datasource db {
+  provider = "postgresql"
+
+}
+
+// ─── Enums ────────────────────────────────────────────────────────
+// Enums are stored as native PostgreSQL enums. They're type-safe
+// at the database level, not just in TypeScript.
+enum UserRole {
+  RESIDENT
+  PROVIDER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// ─── User ─────────────────────────────────────────────────────────
+// One auth account per person. Role determines what they can access.
+// Estate link is optional during registration (can be set later).
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  phone        String   @unique
+  passwordHash String
+  role         UserRole
+  estateId     String?
+  estate       Estate?  @relation(fields: [estateId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  residentBookings Booking[] @relation("ResidentBookings")
+  providerBookings Booking[] @relation("ProviderBookings")
+  providerProfile  ProviderProfile?
+  reviewsGiven     Review[]  @relation("ReviewsGiven")
+  reviewsReceived  Review[]  @relation("ReviewsReceived")
+  notifications    Notification[]
+
+  @@map("users")
+}
+
+// ─── Estate ──────────────────────────────────────────────────────
+// Gated community or neighbourhood. Location is a PostGIS Point for
+// geospatial queries. Boundary is GeoJSON (flexible for MVP).
+model Estate {
+  id        String   @id @default(uuid())
+  name      String
+  location  Unsupported("geometry(Point, 4326)")?
+  boundary  Json? // GeoJSON Polygon, kept as Json for MVP simplicity
+  adminId   String // User ID of the estate admin
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  bookings  Booking[]
+
+  @@map("estates")
+}
+
+// ─── Service Category ──────────────────────────────────────────────
+// Static seed data: plumbing, electrical, cleaning, painting, etc.
+model ServiceCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String?
+  createdAt DateTime @default(now())
+
+  providers ProviderProfile[]
+  bookings  Booking[]
+
+  @@map("service_categories")
+}
+
+// ─── Provider Profile ──────────────────────────────────────────────
+// Separate from User because not all users are providers.
+// One-to-one with User. Rating is cached to avoid aggregating
+// reviews on every search query.
+model ProviderProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId      String
+  category        ServiceCategory @relation(fields: [categoryId], references: [id])
+  bio             String?
+  serviceRadiusKm Int      @default(5)
+  availability    Json?    // { "monday": ["09:00-17:00"], ... }
+  ratingCached    Float    @default(0)
+  reviewCount     Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("provider_profiles")
+}
+
+// ─── Booking ───────────────────────────────────────────────────────
+// Core entity. Status machine enforced in the service layer.
+// PENDING → CONFIRMED → IN_PROGRESS → COMPLETED → PAID / CANCELLED
+model Booking {
+  id            String        @id @default(uuid())
+  residentId    String
+  resident      User          @relation("ResidentBookings", fields: [residentId], references: [id])
+  providerId    String
+  provider      User          @relation("ProviderBookings", fields: [providerId], references: [id])
+  estateId      String
+  estate        Estate        @relation(fields: [estateId], references: [id])
+  categoryId    String
+  category      ServiceCategory @relation(fields: [categoryId], references: [id])
+  status        BookingStatus @default(PENDING)
+  scheduledAt   DateTime?
+  priceQuote    Decimal?      @db.Decimal(10, 2)
+  paymentStatus PaymentStatus @default(PENDING)
+  description   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  payments Payment[]
+  review   Review?
+
+  @@map("bookings")
+}
+
+// ─── Review ───────────────────────────────────────────────────────
+// Tied to a completed booking, not to a provider directly.
+// This guarantees the reviewer actually hired the provider.
+model Review {
+  id          String   @id @default(uuid())
+  bookingId   String   @unique
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reviewerId  String
+  reviewer    User     @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  recipientId String
+  recipient   User     @relation("ReviewsReceived", fields: [recipientId], references: [id])
+  rating      Int      // 1-5
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@map("reviews")
+}
+
+// ─── Payment ───────────────────────────────────────────────────────
+// Decoupled from booking. MVP assumes one payment per booking,
+// but schema allows multiple (deposit + balance) for future.
+model Payment {
+  id           String        @id @default(uuid())
+  bookingId    String
+  booking      Booking       @relation(fields: [bookingId], references: [id])
+  mpesaReceipt String?
+  amount       Decimal       @db.Decimal(10, 2)
+  status       PaymentStatus @default(PENDING)
+  initiatedAt  DateTime      @default(now())
+  completedAt  DateTime?
+
+  @@map("payments")
+}
+
+// ─── Notification ──────────────────────────────────────────────────
+// In-app notifications. SMS/email are handled by background jobs.
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // 'BOOKING_CREATED', 'PAYMENT_RECEIVED', etc.
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
