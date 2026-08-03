@@ -1,59 +1,38 @@
-# docker-compose.yml
-version: '3.8'
+#version: '3.8'
 
 services:
   postgres:
     image: postgis/postgis:16-3.4
+    container_name: njirani-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: njirani
-      POSTGRES_PASSWORD: njirani_dev
+      POSTGRES_PASSWORD: njirani_dev_pass
       POSTGRES_DB: njirani
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U njirani -d njirani"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
+    container_name: njirani-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
-
-  backend:
-    build: ./backend
-    ports:
-      - "3000:3000"
-    environment:
-      - DATABASE_URL=postgresql://njirani:njirani_dev@postgres:5432/njirani
-      - REDIS_URL=redis://redis:6379
-      - AI_SERVICE_URL=http://ai-service:8000
-      - JWT_SECRET=your-secret-key
-    depends_on:
-      - postgres
-      - redis
-      - ai-service
     volumes:
-      - ./backend:/app
-      - /app/node_modules
-
-  ai-service:
-    build: ./python-services/ai-service
-    ports:
-      - "8000:8000"
-    environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - DATABASE_URL=postgresql://njirani:njirani_dev@postgres:5432/njirani
-    depends_on:
-      - postgres
-    volumes:
-      - ./python-services/ai-service:/app
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "3001:3000"
-    depends_on:
-      - backend
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
-
+  redis_data:
