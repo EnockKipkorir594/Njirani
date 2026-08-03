@@ -1,10 +1,13 @@
-import express from "express";
-import { config }  from  "dotenv";
+import 'dotenv/config';
+import express, {  Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
+import { env } from './config/env.js';
 import prisma from "./config/database.js";
 
-config()
+
+
 //initialize the app instance 
-const PORT = process.env.PORT || 8000 ; 
+
 const app = express();
 
 //body parsing middleware
@@ -40,6 +43,43 @@ app.get('/health', async(req,res) => {
         })
     }
 })
+
+//404 handler 
+app.use((_req: Request, res: Response) => {
+    res.status(404).json({
+        success: false,
+        message: 'Route not found'
+    });
+
+});
+
+//global handler 
+app.use((err:unknown, _req: Request, res: Response, _next: NextFunction) => {
+    console.error('Unhandled Error', err);
+
+    if (err instanceof ZodError){
+        const ZodError = err as ZodError
+        res.status(400).json({
+            success: false,
+            message: 'Validation failed',
+            errors: ZodError.issues.map((e) => ({
+                path: e.path.join('.'),
+                message: e.message
+            })),
+        });
+        return;
+
+    }
+
+    //Generic error handler 
+    if (err instanceof ZodError)
+    res.status(500).json({
+        success: false,
+        message : env.NODE_ENV === 'development' ? err.message : 'Internal Server Error',
+    });
+})
+
+const PORT = env.PORT;
 
 app.listen(PORT, () =>{
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
