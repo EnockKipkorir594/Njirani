@@ -251,8 +251,8 @@ Error:
 
 Available Scripts
 | Table |
-| Script |	Command | 	Purpose | 
 | ------ | ------ | ------ |
+| Script |	Command | 	Purpose | 
 | dev |	npm run dev	Start | development server with hot reload |
 | build	| npm run build	 | Compile TypeScript to dist/ |
 | start | npm start	| Run compiled production build |
