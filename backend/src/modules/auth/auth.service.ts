@@ -9,14 +9,14 @@ export async function registerUser(data: RegisterInput) {
     });
 
     if (existingEmail){
-        throw new ConflictError('Conflict');
+        throw new ConflictError('Email is already registered');
     }
     const existingPhone = await prisma.user.findUnique({
-        where: {email:data.email},
+        where: {phone:data.phone},
     })
 
     if (existingPhone){
-        throw new ConflictError('Conflict')
+        throw new ConflictError('Phone number is already registered')
     }
 
     const passwordHash = await bcrypt.hash(data.password, 12)

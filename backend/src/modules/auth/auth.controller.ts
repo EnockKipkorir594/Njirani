@@ -4,7 +4,7 @@ import { Request, Response, NextFunction } from "express";
 import { successResponse } from "../../utils/response.js";
 import { registerUser } from "./auth.service.js";
 
-export  async function requestHandler(
+export  async function registerHandler(
 
     req: Request < unknown, unknown, RegisterInput>,
     res: Response,
