@@ -141,6 +141,7 @@ npm run dev
 ```
 
 ## Project Structure 
+```plain 
 backend/
 ├── prisma/
 │   ├── schema.prisma          # Database schema (committed)
@@ -167,7 +168,7 @@ backend/
 ├── package.json
 ├── tsconfig.json
 └── .env.example               # Environment variable template
-
+```
 
 ## Environment Variables 
 All environment variables are validated at boot time using Zod. If any required variable is missing or malformed, the server exits immediately with a clear error message.
@@ -181,7 +182,8 @@ All environment variables are validated at boot time using Zod. If any required 
 | REDIS_URL |	No	| Redis connection string |
 | FRONTEND_URL	| No	| Frontend origin for CORS |
 
-## Databse Setup 
+
+## Database Setup 
 
 **Why PostGIS?**
 Njirani is location-aware. Residents search for providers within a specific radius of their estate. PostGIS enables efficient geospatial queries (e.g., "find all plumbers within 5km") using native PostgreSQL geometry types.
@@ -281,7 +283,6 @@ The registerSchema enforces:
 
 
 Available Scripts
-| Table |
 | Script |	Command | 	Purpose | 
 | ------ | ------ | ------ |
 | dev |	npm run dev	Start | development server with hot reload |
