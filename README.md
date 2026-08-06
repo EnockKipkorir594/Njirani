@@ -47,7 +47,7 @@ home services done quickly, reliably and by someone they can trust.They are busy
 and they want the job done right.
 
 **Service providers(fundis)** - skilled tradespeople and home service workers who want a steady stream of jobs nearby
-without relying and refferals and WhatsApp groups.Plumbers, electricians, cleaners, painters,gardeners, security guards
+without relying on refferals and WhatsApp groups.Plumbers, electricians, cleaners, painters,gardeners, security guards
 and handymen.
 
 **Estate managers(Admins)** - managers of estates or apartment complexes who want oversight of services being requested
