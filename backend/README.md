@@ -237,6 +237,39 @@ Error:
 }
 
 ```
+### User registration endpoint implementation notes
+Endpoint : POST /auth/register 
+
+files touched: auth.router.ts, auth.controller.ts, auth.schema.ts, auth.service.ts, index.ts 
+
+**Architecture**
+We used controller-service patter to keep HTTP  separate from business logic. 
+
+| Layer | Responsibility | 
+| ------ | ------ |
+| Schema { auth.schema.ts} | Zod validation of the request body |
+| Controller { auth.controller.ts } | Parses request, calls service, returns 201 created |
+| Service { auth.service.ts } | Checks duplicates, hashes password, writes to database |
+| Router { auth.router.ts } | Wires POST/register to the controller | 
+
+**Validation (Zod)** 
+The registerSchema enforces:
+- name: string, 2-100 chars, trimmed
+- email: valid format, lower cased automatically, trimmed
+- phone: string(not a number), 10-15 chars, trimmed
+- password: string, 8-128 chars
+- role: enum | ADMIN | PROVIDER | RESIDENT
+
+**Passowrd Security (bcrypt)**
+- Hashing: bcrypt.hash(password, 12), -async non-blocking
+- Storage: Only the hash enters the database never plaintext.
+- Response: The destructures passwordHash out of the prisma result before returning it to
+            the controller. The client never sees it.
+
+
+
+
+
 
 ## Development Workflow
 **Daily Checklist**
