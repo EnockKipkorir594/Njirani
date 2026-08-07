@@ -10,6 +10,7 @@ generator client {
 // ─── Datasource ───────────────────────────────────────────────────
 datasource db {
   provider = "postgresql"
+ 
 
 }
 
@@ -43,6 +44,7 @@ enum PaymentStatus {
 // Estate link is optional during registration (can be set later).
 model User {
   id           String   @id @default(uuid())
+  name         String
   email        String   @unique
   phone        String   @unique
   passwordHash String

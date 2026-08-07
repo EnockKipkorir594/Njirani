@@ -3,6 +3,9 @@ import express, {  Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import { env } from './config/env.js';
 import prisma from "./config/database.js";
+import authRouter from './modules/auth/auth.router.js'; 
+import { AppError } from './utils/errors.js';
+import { errorResponse } from './utils/response.js';
 
 
 
@@ -44,6 +47,9 @@ app.get('/health', async(req,res) => {
     }
 })
 
+//Register user endpoint 
+app.use('/auth', authRouter);
+
 //404 handler 
 app.use((_req: Request, res: Response) => {
     res.status(404).json({
@@ -54,30 +60,25 @@ app.use((_req: Request, res: Response) => {
 });
 
 //global handler 
-app.use((err:unknown, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     console.error('Unhandled Error', err);
 
-    if (err instanceof ZodError){
-        const ZodError = err as ZodError
-        res.status(400).json({
-            success: false,
-            message: 'Validation failed',
-            errors: ZodError.issues.map((e) => ({
-                path: e.path.join('.'),
-                message: e.message
-            })),
-        });
+    if (err instanceof AppError && err.isOperational){
+        res.status(err.statusCode).json(
+            errorResponse(err.message, err.constructor.name.replace('Error','').toUpperCase())
+        )
         return;
 
     }
 
     //Generic error handler 
-    if (err instanceof ZodError)
-    res.status(500).json({
-        success: false,
-        message : env.NODE_ENV === 'development' ? err.message : 'Internal Server Error',
-    });
-})
+    res.status(500).json(
+        errorResponse(
+            env.NODE_ENV === 'development' ? err.message : 'Internal server error', 
+            'INTERNAL ERROR'
+        )
+    );
+});
 
 const PORT = env.PORT;
 
