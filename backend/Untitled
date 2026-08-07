@@ -1,0 +1,1 @@
+DATABASE_URL="postgresql://njirani:Tucker_%4012@localhost:5432/njiranidb?schema=public"

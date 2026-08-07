@@ -211,6 +211,7 @@ npx prisma studio
 | GET  | / | API status | public |
 | GET | /health | Database connectivity check | public | 
 
+
 **Authentication**
 | Method | Endpoint | Description | Auth |
 | POST | auth/register | Create a new user account | public | 
@@ -269,8 +270,186 @@ The registerSchema enforces:
             the controller. The client never sees it.
 
 
+### Login Endpoint - User Authentication and JWT session management 
+Endpoint:: POST /auth/login 
+The login endpoint authenticates existing users and establishes a secure session. 
+User submits email and password. The API validates the request, locates the user, verifies the password 
+using bcrypt, and - if authentication succeeds - issues a pair of signed JWTs. 
 
+- Access token - short-lived and used to authenticate API requests. 
+- Refresh token - long-lived and used to obtain acess token without requiring the use to login again. 
 
+The implementation keeps authentication responsibilities separated across the schema, controller, service, and JWT utility layers. 
+
+🏗️ **Architecture**
+
+| Layer | File | Responsibility | 
+| ------ | ------ | ------ | 
+| Schema | auth.schema.ts | Validates { email, password } using Zod  |
+| Controller | auth.controller.ts | Validates the request body, calls the authentication service, and returns 200 OK. |
+| Service | auth.service.ts | Finds the user, compares the password, and signs the tokens. |
+| JWT Utility | utils/jwt.ts | Signs and verifies JWTs using secrets provided through env.ts |
+
+**Design principle**
+
+The endpoint follows a simple separation of concerns:
+
+Request
+   │
+   ▼
+Schema Validation
+   │
+   ▼
+Controller
+   │
+   ▼
+Authentication Service
+   │
+   ├── Find User
+   ├── Verify Password
+   └── Issue Tokens
+   │
+   ▼
+JWT Utility
+   │
+   ▼
+Response
+
+🔑 **JWT Token Design**
+THe endpoint issues two different tokens because they serve different purposes.
+
+| Token | Secret | Expiry | Payload | Purpose | 
+| ------ | ------ | ------ | ------ | ------ |
+| Access | JWT_SECRET | 15 minutes | { userId, role} | Authenticate API requests | 
+| Refresh | JWT_REFRESH_SECRET | 7 days | { userId, role} | Obtain new access tokens without re-login | 
+
+**Security decisions** 
+- Tokens contain only userId and role 
+- No email, password hash, or personal data is stored inside the JWT payload.
+- JWT_SECRET and JWT_REFRESH_SECRET are intentionally separate.
+- Compromising one secret does not automatically compromise the other token type.
+- Both secrets are validated at application startup through Zod in env.ts.
+- Each JWT secret must contain a minimum of 32 characters.
+
+**Rule of thumb**: JWTs are signed, not encrypted. Treat their payload as readable by anyone who possesses the token.
+
+🔄 **Login Flow**
+
+POST /auth/login
+        │
+        ▼
+Validate request with Zod
+(email format + non-empty password)
+        │
+        ▼
+Find user by email
+        │
+        ├─────────────── User not found ───────────────► 401
+        │                                                "Invalid credentials"
+        ▼
+bcrypt.compare(inputPassword, storedHash)
+        │
+        ├─────────────── Password mismatch ────────────► 401
+        │                                                "Invalid credentials"
+        ▼
+Remove passwordHash from user object
+        │
+        ▼
+Sign access token (15m)
+        │
+        ▼
+Sign refresh token (7d)
+        │
+        ▼
+Return 200 OK
+{ user, accessToken, refreshToken }
+
+🛡️ **Security: Identical Authentication Errors**
+
+Both of the following situations return the same response:
+
+The user does not exist.
+
+The supplied password is incorrect.
+```JSON
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid credentials"
+  },
+  "message": "Invalid credentials"
+}
+```
+**Why this matters**
+
+Returning different messages such as:
+
+"Email not found"
+
+and:
+
+"Wrong password"
+
+can allow an attacker to determine which email addresses are registered.
+
+The endpoint therefore deliberately uses Invalid credentials for both cases.
+
+🧪 **Testing**
+
+1. **Successful Login**
+
+Request
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@email.com","password":"password123"}'
+```
+Expected Response
+```JSON
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "...",
+      "name": "Test",
+      "email": "test@email.com",
+      "phone": "0712345678",
+      "role": "RESIDENT"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+  },
+  "message": "Login successful"
+}
+```
+2. **Invalid Credentials**
+
+Request
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"wrong@email.com","password":"wrongpassword"}'
+```
+Expected Response
+```JSON
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid credentials"
+}
+  "message": "Invalid credentials"
+}
+```
+
+3. **Inspecting a JWT**
+
+For development and debugging, the access token can be decoded using jwt.io.
+
+The payload can be inspected there, but the signature will appear invalid because the tool does not know the application's private JWT secret.
+
+Important: Never paste real production tokens or secrets into third-party tools.
 
 
 ## Development Workflow

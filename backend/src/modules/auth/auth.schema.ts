@@ -10,7 +10,7 @@ export const registerSchema = z.object ({
     email: z
         .string({ message: 'Email is required'})
         .trim()
-        .min(2,'Email must be at least 2 characters ')
+        .min(2,'Email must be at least 2 characters')
         .email('Invalid email address')
         .toLowerCase(),
 
@@ -32,4 +32,20 @@ export const registerSchema = z.object ({
 
 })
 
+export const LoginSchema = z.object({
+    email: z 
+        .string({message:'Email is required'})
+        .email('Invalid email address')
+        .trim()
+        .min(2, 'Email must be at least 2 characters long')
+        .toLowerCase(),
+
+    password: z 
+        .string({message: 'Password is required'})
+
+})
+
 export type RegisterInput = z.infer<typeof registerSchema>;
+export type LoginInput = z.infer<typeof LoginSchema>;
+
+
