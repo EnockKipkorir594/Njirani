@@ -13,7 +13,7 @@ of knowing if the person showing up at their is reliable or not.
 There is no system, no accountability.No record of who did good work and who didn't.Just a 
 word of mouth in a group chat and hope.
 
-Njirani replaces that chaos with a platform is fast, transparent, and trustworthy.
+Njirani replaces that chaos with a platform that is fast, transparent, and trustworthy.
 
 ## How it works.
 A resident opens Njirani,posts a job - "I need a plumber.Ruaka Estate.blocked drainage." - 
@@ -47,7 +47,7 @@ home services done quickly, reliably and by someone they can trust.They are busy
 and they want the job done right.
 
 **Service providers(fundis)** - skilled tradespeople and home service workers who want a steady stream of jobs nearby
-without relying and refferals and WhatsApp groups.Plumbers, electricians, cleaners, painters,gardeners, security guards
+without relying on refferals and WhatsApp groups.Plumbers, electricians, cleaners, painters,gardeners, security guards
 and handymen.
 
 **Estate managers(Admins)** - managers of estates or apartment complexes who want oversight of services being requested
