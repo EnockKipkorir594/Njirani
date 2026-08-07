@@ -293,7 +293,7 @@ The implementation keeps authentication responsibilities separated across the sc
 **Design principle**
 
 The endpoint follows a simple separation of concerns:
-
+```plain
 Request
    │
    ▼
@@ -314,7 +314,7 @@ JWT Utility
    │
    ▼
 Response
-
+```
 🔑 **JWT Token Design**
 THe endpoint issues two different tokens because they serve different purposes.
 
@@ -334,7 +334,7 @@ THe endpoint issues two different tokens because they serve different purposes.
 **Rule of thumb**: JWTs are signed, not encrypted. Treat their payload as readable by anyone who possesses the token.
 
 🔄 **Login Flow**
-
+```plain
 POST /auth/login
         │
         ▼
@@ -363,6 +363,8 @@ Sign refresh token (7d)
         ▼
 Return 200 OK
 { user, accessToken, refreshToken }
+
+```
 
 🛡️ **Security: Identical Authentication Errors**
 
