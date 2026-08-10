@@ -16,13 +16,13 @@ export const registerSchema = z.object ({
 
     password: z 
         .string({message: 'Password required'})
-        .min(8, "Password must have a minimum of  8 characters")
+        .min(8, "Password must be at least 8 characters long")
         .max(128, 'Password must be at most 128 characters'),
 
     phone: z
         .string({ message: 'Phone number required'})
         .trim()
-        .min(10, 'Phone number should a minimum of 10 characters')
+        .min(10, 'Phone number must be at least 10 characters')
         .max(15, 'Phone number must be at most 15 characaters'),
 
     role: z 
@@ -45,6 +45,7 @@ export const LoginSchema = z.object({
 
 })
 
+//Infer the Typescript from the schema 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 

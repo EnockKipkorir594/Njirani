@@ -15,10 +15,12 @@ export  async function registerHandler(
 
 ){
     try{
+
+        //parse the request  body 
         const parsedBody = registerSchema.parse(req.body);
-
+        //call service registeruser function 
         const user = await registerUser(parsedBody);
-
+        //send response 201 created 
         res.status(201).json(
             successResponse(user, 'User registered successfullly')
         )
@@ -33,10 +35,11 @@ export async function loginHandler(
     next: NextFunction
 ){
     try{
+        //parse request body 
         const { email, password } = LoginSchema.parse(req.body)
-
+        //call service loginuser functio 
         const user = await loginUser(email, password);
-
+        //send response 200 success 
         res.status(200).json(
             successResponse(user, 'User logged in successfully')
         )
