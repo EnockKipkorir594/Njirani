@@ -47,36 +47,37 @@ export async function registerUser(data: RegisterInput) {
     return userWithoutPassword;
 
 }
-
+//login user function 
 export async function loginUser(email: string, password:string){
 
     //FInd user by email 
     const user = await prisma.user.findUnique({
         where: { email: email}
     })
-
+    //return error if user does not exist 
     if (!user){
         throw new UnauthorizedError('Invalid credentials');
 
     }
     //Check if th user passed in the right password
     const checkPassword = await bcrypt.compare(password, user.passwordHash)
-
+    //Return an error if the password is wrong 
     if (!checkPassword){
         throw new UnauthorizedError('Invalid credentials')
 
     }
 
-
+    //remove passwordHash 
     const {passwordHash: _, ...userWithoutPassword } = user;
 
-    //Return an error if the password is wrong 
-
+    //pass in userid and role inside the payload 
     const payload = {userId: user.id, role: user.role}
 
+    //sign access and refresh tokens 
     const accessToken  = signAccessToken(payload)
     const refreshToken = signRefreshToken(payload)
 
+    //send the user with password and the refresh and access tokens
     return {userWithoutPassword, accessToken, refreshToken};
     
     
