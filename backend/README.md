@@ -218,7 +218,7 @@ npx prisma studio
 | POST | auth/register | Create a new user account | public | 
 | POST | auth/login | Authenticate and receive tokens | public | 
 | GET | auth/me | authenticate user using bearer token | protected | 
-| GET | admin-only | authenticates and authorizes user based on their role | protected |
+| GET | auth/admin-only | authenticates and authorizes user based on their role | protected |
 | POST | auth/refresh | refreshes exipired access token (token rotation) | protected | 
 
 **Response Format**
