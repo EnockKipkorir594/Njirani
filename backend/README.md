@@ -16,6 +16,7 @@ database design to deployment.
 - [Databse Setup](#database-setup)
 - [Running the Server](#running-the-server)
 - [API Endpoints](#api-endpoints)
+- [Authorization and Authentication](#authorization-authentication)
 - [Developmennt Workflow](#development-workflow)
 - [Architecture Decisions](#architecture-decisions)
 
@@ -462,6 +463,118 @@ Refresh token test cases
 ✅ Tampered refresh token          → 401
 ✅ Missing refresh token in body   → 400
 ✅ Token for deleted user          → 401 "User no longer exists"
+```
+## Authentication and Authorization 
+### Authentication Middleware, RBAC & Refresh Tokens 
+
+Overview
+
+This section  covers three foundational security features implemented in the Njirani backend:
+
+- Authentication Middleware — verifying who is making a request
+- Role-Based Access Control (RBAC) — verifying what they are allowed to do
+
+These  features work together as a complete authentication system. Every protected route in Njirani passes through authentication and authorisation before any business logic runs.
+
+**Why these features matter** 
+Without authentication and authorisation, any user could access any route. A resident could trigger a payout. A provider could read another provider's private data. An anonymous request could delete a booking.
+
+Authentication answers: who are you? Authorisation answers: are you allowed to do this?
+
+Both questions must be answered on every protected request — in that order.
+
+**Authentication vs Authorization** 
+These two components are frequently confused.They are not the same thing.
+| Concept | Question | Example |
+| ------ | ------ | ------ |
+| Authentication | Who are you ? | Verifying a JWT signature | 
+| Authorization |  What are you allowed to do ? | CChecking if a RESIDENT can access an admin route | 
+
+A request can be authenticated but not authorised. A RESIDENT sending a valid JWT to an admin-only route is authenticated — we know who they are — but not authorised — they do not have permission.
+
+**Authentication Middleware** 
+**What it does**
+The authenticate middleware intercepts every request to a protected route before the route handler runs. It extracts the JWT from the Authorization header, verifies the signature and expiry, and attaches the decoded user payload to req.user.
+
+**Why it is implemented as middleware**
+Middleware runs once before the route handler. This means authentication logic lives in one place — not duplicated across every controller. Every route that needs authentication simply adds authenticate to its middleware chain.
+
+**How a request flows through it** 
+```plain 
+Incoming request
+        ↓
+Extract Authorization header
+        ↓
+Does it start with "Bearer"?
+    ├── No  → 401 Unauthorized
+    └── Yes → Extract token
+                ↓
+           jwt.verify(token, JWT_SECRET)
+                ↓
+           Valid?
+            ├── No  → 401 Invalid or expired token
+            └── Yes → Attach decoded payload to req.user
+                            ↓
+                       Call next() → route handler runs
+
+```
+**Why we distinguish expired vs invalid tokens** 
+```TypeScript
+if (error instanceof jwt.TokenExpiredError) {
+    return next(new UnauthorizedError('Token has expired'))
+}
+return next(new UnauthorizedError('Invalid token'))
+
+```
+The distinction matters for the client. An expired token means the client should use the refresh token to get a new access token. An invalid token means the client should redirect to login. Different errors — different client behaviour.
+
+### Role-Based Access Control (RBAC)
+**What it does**
+The requireRole middleware checks whether the authenticated user's role is permitted to access a specific route. It runs after authenticate — meaning the user is already verified before roles are checked.
+
+**Why RBAC** 
+Njirani has three user types with different permissions:
+
+| Role | Permissions | 
+| ------ | ------ |
+| RESIDENT | Post service requests, view bids, make payments, leave reviews |
+| PROVIDER | View service requests, submit bids, receive payments | 
+| ADMIN | Full access - manage estates, users, and all platform data | 
+
+Without RBAC, a resident could access provider-only routes or worse — admin routes. Every sensitive route is locked to specific roles.
+
+**Why require Role is a factory function**
+requireRole returns a middleware function rather than being a middleware function itself. This pattern is called a middleware factory — it lets you configure the middleware differently per route.
+
+```TypeScript 
+// Each route declares its own allowed roles
+router.get('/admin-only',   authenticate, requireRole([UserRole.ADMIN]),              handler)
+router.post('/bids',        authenticate, requireRole([UserRole.PROVIDER]),            handler)
+router.get('/my-bookings',  authenticate, requireRole([UserRole.RESIDENT]),            handler)
+router.get('/dashboard',    authenticate, requireRole([UserRole.ADMIN, UserRole.PROVIDER]), handler)
+
+```
+**Why 401 and 403 are different responses**
+```plain 
+401 Unauthorized → the request has no valid identity
+                   (no token, expired token, invalid token)
+
+403 Forbidden    → the request has a valid identity
+                   but is not permitted to access this resource
+                   (wrong role)
+
+
+```
+Returning 401 when you mean 403 — or vice versa — is a common junior mistake. The distinction matters for clients handling errors and for security auditing.
+
+**How it flows**
+```plain 
+req.user exists?
+    ├── No  → 401 Unauthorized
+    └── Yes → Is req.user.role in allowedRoles?
+                ├── No  → 403 Forbidden
+                └── Yes → next() → route handler runs
+
 ```
 
 🏗️ **Architecture**
