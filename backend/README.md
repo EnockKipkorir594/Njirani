@@ -216,6 +216,9 @@ npx prisma studio
 | Method | Endpoint | Description | Auth |
 | POST | auth/register | Create a new user account | public | 
 | POST | auth/login | Authenticate and receive tokens | public | 
+| GET | auth/me | authenticate user using bearer token | protected | 
+| GET | admin-only | authenticates and authorizes user based on their role | protected |
+| POST | auth/refresh | refreshes exipired access token (token rotation) | protected | 
 
 **Response Format**
 All API responses follow a consistent envolope. 
@@ -280,6 +283,186 @@ using bcrypt, and - if authentication succeeds - issues a pair of signed JWTs.
 - Refresh token - long-lived and used to obtain acess token without requiring the use to login again. 
 
 The implementation keeps authentication responsibilities separated across the schema, controller, service, and JWT utility layers. 
+
+### Refresh Token Endpoint 
+**The problem it solves**
+
+Access tokens are intentionally short-lived — typically 15 minutes to 8 hours. A short lifespan limits the damage if a token is stolen. But short-lived tokens create a poor user experience if users are logged out constantly.
+
+Refresh tokens solve this. They are long-lived tokens (7-30 days) used only to obtain new access tokens. The user stays logged in. The access token stays short-lived. Both goals are achieved simultaneously.
+
+**Why a valid token is not enough**
+
+When a refresh token arrives, the server does not just verify the signature. It also checks the database. A valid token proves the token has not expired or been tampered with — it does not prove the user still exists or still has the same role.
+
+```plain 
+Token is valid
+        ↓
+Does the user still exist in the database?
+    ├── No  → 401 — account deleted or suspended
+    └── Yes → Has the user's role changed?
+                └── Always build new payload from database
+                    (never trust the old token's role)
+
+```
+**Refresh Token Rotation** 
+Every time a refresh token is used, the server issues a brand new refresh token and the old one is invalidated. This is called refresh token rotation.
+
+```plain 
+Client sends refresh token A
+        ↓
+Server verifies A — valid
+        ↓
+Server issues:
+    - New access token
+    - New refresh token B
+        ↓
+Refresh token A is now dead
+Client stores refresh token B
+
+```
+**Why this matters for security:** If an attacker steals refresh token A, they can use it once before the legitimate user's next request invalidates it. The attack window closes automatically with every legitimate use.
+
+**Why two separate secrets**
+
+The access token and refresh token are signed with different secrets (JWT_SECRET and JWT_REFRESH_SECRET). This means:
+
+- A stolen access token cannot be used to generate a new refresh token
+- A stolen refresh token cannot be used as an access token
+- Rotating one secret does not invalidate the other
+
+**How authentication, authorization (RBAC) and refresh tokens work together**
+```plain 
+1. User logs in
+        ↓
+   Server issues:
+   - Access token  (short-lived: 8h)
+   - Refresh token (long-lived: 7d)
+
+2. Client makes authenticated requests
+        ↓
+   Authorization: Bearer <access_token>
+        ↓
+   authenticate middleware verifies signature
+        ↓
+   requireRole middleware checks permission
+        ↓
+   Route handler runs
+
+3. Access token expires
+        ↓
+   Server returns 401 "Token has expired"
+        ↓
+   Client sends refresh token to POST /auth/refresh
+        ↓
+   Server verifies refresh token
+        ↓
+   Server issues new access token + new refresh token
+        ↓
+   Client retries original request with new access token
+
+4. User logs out
+        ↓
+   Client discards both tokens
+
+  ```
+**Route protection in practice**
+```TypeScript
+// Public routes — no middleware
+router.post('/auth/register', registerHandler)
+router.post('/auth/login',    loginHandler)
+router.post('/auth/refresh',  refreshHandler)
+
+// Authenticated — any logged in user
+router.get('/auth/me', authenticate, meHandler)
+
+// Role-specific
+router.post('/bids',     authenticate, requireRole([UserRole.PROVIDER]), createBidHandler)
+router.get('/admin',     authenticate, requireRole([UserRole.ADMIN]),    adminHandler)
+router.post('/bookings', authenticate, requireRole([UserRole.RESIDENT]), createBookingHandler)
+
+// Multiple roles allowed
+router.get('/notifications', authenticate, requireRole([UserRole.RESIDENT, UserRole.PROVIDER]), notificationsHandler)
+
+```
+**API Reference**
+POST /api/auth/refresh
+
+Exchanges a valid refresh token for a new access token and refresh token.
+
+Request body:
+```json 
+{
+    "refreshToken": "eyJhbGci..."
+}
+```
+Success response — 200 OK:
+```json
+{
+    "success": true,
+    "message": "Token refreshed successfully",
+    "data": {
+        "accessToken": "eyJhbGci...",
+        "refreshToken": "eyJhbGci...",
+        "user": {
+            "id": "uuid",
+            "email": "enock@njirani.co.ke",
+            "role": "RESIDENT"
+        }
+    }
+}
+```
+Error responses:
+| Status | Message | Cause | 
+| ------ | ------ | ------ |
+| 400 | Refresh token is required | No token in request body | 
+| 401 | Invalid or expired refresh token | Token failed verification | 
+| 401 | User no longer exists | User deleted after token issued |
+
+GET /api/auth/me
+Returns the currently authenticated user. Requires a valid access token.
+```Http 
+Authorization: Bearer <access_token>
+```
+Success response — 200 OK:
+```json 
+{
+    "success": true,
+    "user": {
+        "userId": "uuid",
+        "role": "RESIDENT"
+    }
+}
+```
+**Testing**
+Authentication middleware test cases
+```plain
+✅ Valid token                     → 200
+✅ No Authorization header         → 401
+✅ Missing Bearer prefix           → 401
+✅ Malformed token                 → 401
+✅ Tampered token (changed chars)  → 401
+✅ Expired token                   → 401 "Token has expired"
+```
+
+RBAC test cases
+```plain 
+✅ Correct role accessing route    → 200
+✅ Wrong role accessing route      → 403 Forbidden
+✅ No token accessing role route   → 401 Unauthorized
+✅ Multiple allowed roles — match  → 200
+✅ Multiple allowed roles — no match → 403
+```
+
+Refresh token test cases
+```plain
+✅ Valid refresh token             → 200 + new tokens
+✅ Expired refresh token           → 401
+✅ Malformed refresh token         → 401
+✅ Tampered refresh token          → 401
+✅ Missing refresh token in body   → 400
+✅ Token for deleted user          → 401 "User no longer exists"
+```
 
 🏗️ **Architecture**
 
