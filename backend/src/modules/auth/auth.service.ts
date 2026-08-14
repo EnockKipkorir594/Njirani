@@ -4,6 +4,9 @@ import { ConflictError } from "../../utils/errors.js";
 import { RegisterInput } from "./auth.schema.js";
 import { signAccessToken, signRefreshToken } from "../../utils/jwt.js";
 import { UnauthorizedError } from "../../utils/errors.js";
+import { UserRole } from "../../generated/prisma/index.js";
+import jwt from 'jsonwebtoken';
+import { env } from "../../config/env.js";
 
 
 
@@ -35,7 +38,7 @@ export async function registerUser(data: RegisterInput) {
             email: data.email,
             phone: data.phone,
             passwordHash,
-            role: data.role,
+            role: data.role
 
         },
 
@@ -77,16 +80,48 @@ export async function loginUser(email: string, password:string){
     const accessToken  = signAccessToken(payload)
     const refreshToken = signRefreshToken(payload)
 
+
     //send the user with password and the refresh and access tokens
     return {userWithoutPassword, accessToken, refreshToken};
-    
-    
-
-
-
 
 }
 
+export async function refreshAccessToken(refreshToken: string){
+    //verify the token
+    let  decoded: {userId: string , role: UserRole}
+
+    try{
+        decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as {
+        userId : string, 
+        role: UserRole 
+    };
+    }catch {
+        throw new UnauthorizedError('Invalid or expired token')
+    }
+
+    const user = await prisma.user.findUnique({
+        where : {id: decoded.userId},
+    });
+
+    if (!user){
+        throw new UnauthorizedError('Invalid token')
+    }
+
+    const { passwordHash: _, ...userWithoutPassword } = user;
+    //mint a new refresh token 
+
+    const payload = {userId: user.id, role: user.role}
+
+    const accessToken  = signAccessToken(payload)
+    const newRefreshToken =  signRefreshToken(payload)
+
+    return {
+        user: userWithoutPassword,
+        accessToken, 
+        refreshToken: newRefreshToken,
+    }
+
+}
 
 
 

@@ -45,7 +45,17 @@ export const LoginSchema = z.object({
 
 })
 
+
+export const refreshSchema = z.object ({
+    
+    refreshToken: z
+        .string('Refresh token is required')
+        .min(1, 'Refresh token cannot be empty')
+
+
+})
 //Infer the Typescript from the schema 
+export type RefreshInput = z.infer<typeof refreshSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 
