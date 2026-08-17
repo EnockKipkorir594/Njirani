@@ -215,7 +215,7 @@ npx prisma studio
 
 **Authentication**
 | Method | Endpoint | Description | Auth |
-| ------ | ------ | ------ | ------ |
+| ------ | ------ | ------- | ------ |
 | POST | auth/register | Create a new user account | public | 
 | POST | auth/login | Authenticate and receive tokens | public | 
 | GET | auth/me | authenticate user using bearer token | protected | 
