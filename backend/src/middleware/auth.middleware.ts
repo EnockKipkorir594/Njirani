@@ -14,7 +14,7 @@ export  function authenticate(req: Request, res:Response, next:NextFunction) {
 
     //authentication (who are you ?)
 
-    //Initialize a token 
+    //Initialize a token, string or undefined 
     let token: string | undefined ;
     //check if authorization header exists and  header startwith bearer 
     if (req.headers.authorization?.startsWith('Bearer')){
@@ -23,15 +23,16 @@ export  function authenticate(req: Request, res:Response, next:NextFunction) {
     }
     //If no token is provided  throw unauthorized error
     if(!token){
-        return next(new UnauthorizedError('Unauthorized'))
+
+        return next(new UnauthorizedError('Unauthorized user'))
     
     }
 
     try{
-        //verify the provided token if it is valid or has been tampared with.
+        //verify the provided token if it is valid or if it has been tampared with.
         const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload
           
-        //attaches the req to the decoded payload 
+        //attaches the req.user to the decoded payload 
         req.user = decoded
         next();
 
