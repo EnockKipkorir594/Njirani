@@ -1,0 +1,75 @@
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+
+name: Node.js CI
+
+on:
+  
+  pull_request:
+    branches: [ "development" ]
+
+
+
+jobs:
+
+# JOB 1: Lint
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+        
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js 
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    - name: Install dependencies
+      run: npm ci
+    - name: Run Eslint
+      run: npm run lint 
+
+      
+# JOB 2: test
+  test:
+    name: test
+    runs-on: ubuntu-latest
+  
+    defaults:
+      run:
+        working-directory: ./backend
+        
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js 
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests
+      run: npm test 
+
+  # JOB 3: Docker Build 
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Build Docker Image
+      run: docker build -t njirani-backend:test ./backend 
