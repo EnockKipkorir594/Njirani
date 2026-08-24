@@ -45,7 +45,7 @@ export async function registerUser(data: RegisterInput) {
     });
 
     //removes the hashed password and returns the user details
-    const {passwordHash: _, ...userWithoutPassword } = user;
+    const {passwordHash: _passwordHash, ...userWithoutPassword } = user;
 
     return userWithoutPassword;
 
@@ -71,7 +71,7 @@ export async function loginUser(email: string, password:string){
     }
 
     //remove passwordHash 
-    const {passwordHash: _, ...userWithoutPassword } = user;
+    const {passwordHash:_passwordHash, ...userWithoutPassword } = user;
 
     //pass in userid and role inside the payload 
     const payload = {userId: user.id, role: user.role}
@@ -102,14 +102,14 @@ export async function refreshAccessToken(refreshToken: string){
     const user = await prisma.user.findUnique({
         where : {id: decoded.userId},
     });
-
+    //chck if the user still exists or has been deleted 
     if (!user){
         throw new UnauthorizedError('Invalid token')
     }
 
-    const { passwordHash: _, ...userWithoutPassword } = user;
-    //mint a new refresh token 
-
+    const { passwordHash: _passwordHash, ...userWithoutPassword } = user;
+   
+    
     const payload = {userId: user.id, role: user.role}
 
     const accessToken  = signAccessToken(payload)
