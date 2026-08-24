@@ -3,7 +3,6 @@ import { PrismaClient } from '../generated/prisma/index.js'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { env } from './env.js'
 
-
 const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined;
 }
