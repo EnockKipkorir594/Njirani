@@ -2,6 +2,7 @@ import { createProviderProfile, listProviderProfiles} from "./providers.service.
 import {  providerSchema, listProvidersQuerySchema } from "./providers.schema.js"
 import { Request, Response, NextFunction } from "express"
 import { successResponse } from "../../utils/response.js";
+import { UnauthorizedError } from "../../utils/errors.js";
 
 export async function createProviderHandler(
     req: Request<unknown, unknown, unknown, unknown>, // adjust if you have body types
@@ -10,12 +11,20 @@ export async function createProviderHandler(
   ) {
     try {
       // req.user is set by your authenticate middleware
-      const userId = (req as any).user.userId;
+      if (!req.user) {
+        return next(
+          new UnauthorizedError('Authentication required')
+        )
+      }
   
       // Validate body
       const parsedBody = providerSchema.parse(req.body);
   
-      const profile = await createProviderProfile(userId, parsedBody);
+      
+      const profile = await createProviderProfile(
+        req.user.userId,
+        parsedBody
+      )
   
       res.status(201).json(
         successResponse(profile, 'Provider profile created successfully')

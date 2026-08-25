@@ -32,22 +32,26 @@ export async function registerUser(data: RegisterInput) {
     const passwordHash = await bcrypt.hash(data.password, 12)
     //create user 
     const user = await prisma.user.create({
-
         data: {
-            name: data.name,
-            email: data.email,
-            phone: data.phone,
-            passwordHash,
-            role: data.role
-
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          passwordHash,
+          role: data.role,
         },
-
-    });
-
-    //removes the hashed password and returns the user details
-    const {passwordHash: _passwordHash, ...userWithoutPassword } = user;
-
-    return userWithoutPassword;
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          estateId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
+      
+      return user
 
 }
 //login user function 
@@ -71,18 +75,33 @@ export async function loginUser(email: string, password:string){
     }
 
     //remove passwordHash 
-    const {passwordHash:_passwordHash, ...userWithoutPassword } = user;
+    const userWithoutPassword = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        estateId: user.estateId,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      }
+       //pass in userid and role inside the payload 
+      const payload = {
+        userId: user.id,
+        role: user.role,
+      }
+      //sign access and refresh tokens 
+      const accessToken = signAccessToken(payload)
+      const refreshToken = signRefreshToken(payload)
+      
+      //send the user without password and the refresh and access tokens
+      return {
+        user: userWithoutPassword,
+        accessToken,
+        refreshToken,
+      }
 
-    //pass in userid and role inside the payload 
-    const payload = {userId: user.id, role: user.role}
-
-    //sign access and refresh tokens 
-    const accessToken  = signAccessToken(payload)
-    const refreshToken = signRefreshToken(payload)
-
-
-    //send the user with password and the refresh and access tokens
-    return {userWithoutPassword, accessToken, refreshToken};
+   
 
 }
 
@@ -100,26 +119,40 @@ export async function refreshAccessToken(refreshToken: string){
     }
 
     const user = await prisma.user.findUnique({
-        where : {id: decoded.userId},
-    });
+        where: {
+          id: decoded.userId,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          estateId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
+
     //chck if the user still exists or has been deleted 
     if (!user){
         throw new UnauthorizedError('Invalid token')
     }
-
-    const { passwordHash: _passwordHash, ...userWithoutPassword } = user;
    
     
-    const payload = {userId: user.id, role: user.role}
-
-    const accessToken  = signAccessToken(payload)
-    const newRefreshToken =  signRefreshToken(payload)
-
-    return {
-        user: userWithoutPassword,
-        accessToken, 
+      const payload = {
+        userId: user.id,
+        role: user.role,
+      }
+      
+      const accessToken = signAccessToken(payload)
+      const newRefreshToken = signRefreshToken(payload)
+      
+      return {
+        user,
+        accessToken,
         refreshToken: newRefreshToken,
-    }
+      }
 
 }
 

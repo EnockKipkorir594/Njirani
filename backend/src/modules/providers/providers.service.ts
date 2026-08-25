@@ -1,4 +1,5 @@
 import { ProviderInput } from "./providers.schema.js";
+import { Prisma } from "../../generated/prisma/index.js";
 import prisma from "../../config/database.js";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../utils/errors.js";
 
@@ -93,15 +94,16 @@ export async function listProviderProfiles(filters: {
     const skip = (page - 1) * limit 
 
     //Build the where clause dynamically
-    const where: any = {}
+    const where: Prisma.ProviderProfileWhereInput = {}
 
     if (filters.categoryId) {
         where.categoryId = filters.categoryId
     }
-
-    if (filters.categorySlug){
-        where.categorySlug = { slug : filters.categorySlug}
-    }
+    if (filters.categorySlug) {
+        where.category = {
+          slug: filters.categorySlug,
+        }
+      }
 
     if (filters.search){
         where.OR = [
@@ -112,7 +114,7 @@ export async function listProviderProfiles(filters: {
 
     //sorting 
     const orderBy = filters.sortBy === 'rating'
-        ? {ratingCache: 'desc' as const}
+        ? {ratingCached: 'desc' as const}
         : {createdAt: 'desc' as const}
 
 
