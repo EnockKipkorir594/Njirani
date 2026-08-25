@@ -18,11 +18,11 @@ export  async function registerHandler(
 
         //parse the request  body 
         const parsedBody = registerSchema.parse(req.body);
-        //call service registeruser function 
+        //call service registeruser function to register user 
         const user = await registerUser(parsedBody);
         //send response 201 created 
         res.status(201).json(
-            successResponse(user, 'User registered successfullly')
+            successResponse( {user} , 'User registered successfullly')
         )
     }catch(error){
         next(error);

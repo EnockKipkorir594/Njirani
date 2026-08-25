@@ -1,17 +1,18 @@
 import 'dotenv/config';
-import express, {  Request, Response, NextFunction } from "express";
-import { ZodError } from "zod";
+import express, {  Request, Response } from "express";
 import { env } from './config/env.js';
 import prisma from "./config/database.js";
 import authRouter from './modules/auth/auth.router.js'; 
 import { AppError } from './utils/errors.js';
 import { errorResponse } from './utils/response.js';
+import estateRouter from './modules/estates/estates.router.js';
+import providerRouter from './modules/providers/providers.router.js';
 
 
 
-//initialize the app instance 
+//initialize the app instance
+const app = express()
 
-const app = express();
 
 //body parsing middleware
 app.use(express.json())
@@ -25,7 +26,7 @@ app.get('/', (req, res) => {
 
 });
 
-//GET /heaalth route
+//GET /health route
 app.get('/health', async(req,res) => {
     try{
         
@@ -41,14 +42,21 @@ app.get('/health', async(req,res) => {
     }catch(error){
         res.status(500).json({
             success: false,
+            error,
             message: "API is running but database is down",
             database: "disconnected"
         })
     }
 })
 
-//Register user endpoint 
+//Register auth endpoint 
 app.use('/auth', authRouter);
+
+//Register estates endpoint 
+app.use('/estates', estateRouter);
+
+//provider profile endpoints 
+app.use('/providers', providerRouter)
 
 //404 handler 
 app.use((_req: Request, res: Response) => {
@@ -60,7 +68,7 @@ app.use((_req: Request, res: Response) => {
 });
 
 //global handler 
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response) => {
     console.error('Unhandled Error', err);
 
     if (err instanceof AppError && err.isOperational){
