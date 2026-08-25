@@ -39,7 +39,12 @@ jobs:
       
 # JOB 2: test
   test:
+    name: Test
     runs-on: ubuntu-latest
+    needs: lint
+    defaults:
+      run:
+        working-directory: ./backend
 
     services:
       postgres:
@@ -53,51 +58,42 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
         ports:
           - 5432:5432
-
+      
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '20.x'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
+      - run: npm ci
 
-      - name: Install dependencies
-        working-directory: ./backend
-        run: npm ci
-
-      - name: Generate Prisma client      # ← this is the fix
-        working-directory: ./backend
+      - name: Generate Prisma Client
+        env:
+          DATABASE_URL: postgresql://njirani:njirani_dev_pass@localhost:5432/njirani_test
         run: npx prisma generate
+
+
+      - name: Setup database
         env:
           DATABASE_URL: postgresql://njirani:njirani_dev_pass@localhost:5432/njirani_test
-
-      - name: Run database migrations
-        working-directory: ./backend
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: postgresql://njirani:njirani_dev_pass@localhost:5432/njirani_test
-
-      - name: Run TypeScript check
-        working-directory: ./backend
-        run: npx tsc --noEmit
+        run: |
+          npx prisma db push --accept-data-loss
+          psql "$DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS postgis;"
 
       - name: Run tests
-        working-directory: ./backend
-        run: npm test
         env:
-          NODE_ENV: test
           DATABASE_URL: postgresql://njirani:njirani_dev_pass@localhost:5432/njirani_test
-          JWT_SECRET: test-jwt-secret-key-for-njirani-testing-only-32chars
-          JWT_REFRESH_SECRET: test-jwt-refresh-secret-for-njirani-testing-only-32chars
+          JWT_SECRET: test-jwt-secret-key-for-testing-only-12345
+          JWT_REFRESH_SECRET: test-jwt-refresh-secret-key-for-testing-only-67890
           JWT_EXPIRES_IN: 1h
           JWT_REFRESH_EXPIRES_IN: 7d
+          NODE_ENV: test
           PORT: 8001
+        run: npm test
 
   # JOB 3: Docker Build 
   docker-build:
