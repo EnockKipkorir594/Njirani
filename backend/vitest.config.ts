@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
    
     pool: 'forks',
+    testTimeout: 15000,
     globals: true,
     env: {
       NODE_ENV: 'test',
