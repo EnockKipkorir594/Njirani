@@ -51,16 +51,38 @@ export async function createEstate(data: EstateInput){
     }) ;
 }
 
-export async function getEstates(){
-    //fetch all estates and order them by when they were created at.
-    const estates = await prisma.estate.findMany({
-        orderBy : {
-            createdAt: 'desc',
-        }
+export async function getEstates(filters: {
+    page?: number;
+    limit?: number;
+    search?: string;
+}) {
+    const page = Math.max(1, filters.page ?? 1);
+    const limit = Math.min(50, Math.max(1, filters.limit ?? 20));
+    const skip = (page - 1) * limit;
 
-    });
+    const where: any = {};
+    if (filters.search) {
+        where.name = { contains: filters.search, mode: 'insensitive' };
+    }
 
-    //return the estates array
-    return estates
+    const [estates, total] = await Promise.all([
+        prisma.estate.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+        }),
+        prisma.estate.count({ where }),
+    ]);
+
+    return {
+        estates,
+        meta: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+        },
+    };
 }
 

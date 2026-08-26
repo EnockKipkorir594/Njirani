@@ -3,6 +3,7 @@ import { EstateInput, estateSchema } from "./estates.schema.js";
 import { createEstate, getEstates } from "./estates.service.js";
 import { successResponse } from "../../utils/response.js";
 import { ConflictError } from "../../utils/errors.js";
+import { listEstatesQuerySchema } from "./estates.schema.js";
 
 
 export async function createEstateHandler (
@@ -29,20 +30,26 @@ export async function createEstateHandler (
     }
 }
 
+
+
 export async function getEstatesHandler(
     req: Request,
     res: Response,
     next: NextFunction
-){
+) {
     try {
-
-        const estates = await getEstates();
+        const query = listEstatesQuerySchema.parse(req.query);
+        const result = await getEstates({
+            page: query.page,
+            limit: query.limit,
+            search: query.search,
+        });
 
         res.status(200).json(
-            successResponse(estates, 'List of estates')
-        )
-
-    }catch(error){
+            successResponse(result.estates, 'List of estates', result.meta)
+            //                                                    ↑ ADD META
+        );
+    } catch (error) {
         next(error);
     }
 }

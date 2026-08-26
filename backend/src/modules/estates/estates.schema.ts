@@ -29,4 +29,12 @@ export const estateSchema = z.object({
 
 })
 
+
+export const listEstatesQuerySchema = z.object({
+    page: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 1)),
+    limit: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 20)),
+    search: z.string().optional(),
+});
+
+export type ListstateInput = z.infer< typeof listEstatesQuerySchema >;
 export type EstateInput = z.infer< typeof estateSchema>;
