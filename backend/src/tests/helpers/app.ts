@@ -3,6 +3,7 @@ import { json } from 'express'
 import authRouter from '../../modules/auth/auth.router.js'
 import estatesRouter from '../../modules/estates/estates.router.js'
 import { errorHandler } from '../../middleware/error.middleware.js'
+import providerRouter from '../../modules/providers/providers.router.js'
 
 // Create a test instance of your Express app
 // Separate from your main app so tests do not start a real server
@@ -14,6 +15,7 @@ export function createTestApp() {
     // Mount your routers
     app.use('/api/v1/auth',    authRouter)
     app.use('/api/v1/estates', estatesRouter)
+    app.use('/api/v1/providers', providerRouter)
 
     // Global error handler must be last
     app.use(errorHandler)
