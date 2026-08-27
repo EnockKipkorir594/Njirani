@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import request from 'supertest'
 import { createTestApp } from '../../tests/helpers/app.js'
 import prisma from '../../config/database.js'
+import { cleanDatabase } from '../../tests/helpers/cleanup.js'
 
 const app = createTestApp()
 
@@ -10,13 +11,13 @@ const app = createTestApp()
 
 beforeAll(async () => {
     // Clean the test database before running tests
-    await prisma.user.deleteMany()
+    await cleanDatabase()
 })
 
 afterAll(async () => {
     // Clean up after all tests finish
     await prisma.user.deleteMany()
-    await prisma.$disconnect()
+    await prisma.$disconnect
 })
 
 // ── Register tests ────────────────────────────────────────────────

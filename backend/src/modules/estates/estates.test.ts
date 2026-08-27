@@ -3,6 +3,7 @@ import  request  from "supertest";
 import { createTestApp } from "../../tests/helpers/app.js";
 import prisma from "../../config/database.js";
 import { signAccessToken } from "../../utils/jwt.js";
+import { cleanDatabase } from "../../tests/helpers/cleanup.js";
 
 const app = createTestApp()
 
@@ -29,8 +30,7 @@ const estatePayload = {
 // Setup and teardown 
 beforeAll( async() => {
     // clean up the database in order: estate referenes user (FK)
-    await prisma.estate.deleteMany()
-    await prisma.user.deleteMany()
+    await cleanDatabase()
 
     //create a real admin user(FK user requires a valid userIdd)
 
