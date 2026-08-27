@@ -132,14 +132,16 @@ export async function listProviderProfiles(filters: {
                         name: true,
                         email: true,
                         phone: true
-                    },  
+                    }  
+                },
+
                 category:{
                     select:{
                         id: true,
                         name: true,
                         slug: true
                         },
-                    },
+                    
                 },
             
             }

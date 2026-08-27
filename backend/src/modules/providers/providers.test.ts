@@ -3,6 +3,7 @@ import request from 'supertest'
 import { createTestApp } from '../../tests/helpers/app.js'
 import prisma from '../../config/database.js'
 import { signAccessToken } from '../../utils/jwt.js'
+import { cleanDatabase } from '../../tests/helpers/cleanup.js'
 
 const app = createTestApp()
 
@@ -10,6 +11,11 @@ let providerId: string;
 let providerToken: string;
 let residentToken: string;
 let categoryId: string;
+
+
+const timestamp = Date.now()
+const PROVIDER_EMAIL = `provider-${timestamp}@njirani.co.ke`
+const RESIDENT_EMAIL = `resident-${timestamp}@njirani.co.ke`
 
 const providerPayload = {
     categoryId: 'dummyid123',
@@ -22,26 +28,29 @@ const providerPayload = {
 beforeAll( async () => {
     await prisma.providerProfile.deleteMany()
     await prisma.user.deleteMany()
+    await prisma.estate.deleteMany()
     await prisma.serviceCategory.deleteMany()
+
 
 
     const category = await prisma.serviceCategory.create({
         data:{
             name:'Plumbing',
-            slug:'Plumbing',
+            slug:'plumbing',
             icon:'wrench'
             
         }
     })
 
     categoryId = category.id
+    providerPayload.categoryId = categoryId
 
 
     const provider = await prisma.user.create({
         data:{
             name: 'Estate Resident',
-            email: 'resident-estate@njirani.co.ke',
-            phone: '+254700000201',
+            email: PROVIDER_EMAIL,
+            phone: '+254700000301',
             passwordHash: 'dummyhashfortests',
             role: 'PROVIDER',
 
@@ -54,7 +63,7 @@ beforeAll( async () => {
     const resident = await prisma.user.create({
         data:{
             name: 'Estate Resident',
-            email: 'resident-estate@njirani.co.ke',
+            email: RESIDENT_EMAIL,
             phone: '+254700000201',
             passwordHash: 'dummyhashfortests',
             role: 'RESIDENT',
@@ -64,8 +73,6 @@ beforeAll( async () => {
 
     
     residentToken = signAccessToken({ userId: resident.id, role: resident.role})
-
-  
 
 })
 
@@ -79,9 +86,9 @@ afterAll( async () => {
 
 //Create provider profile 
 describe('POST /api/v1/providers/create', () => {
-    it('creates new provier profile and returns 201', async () => {
+    it('creates new provider profile and returns 201', async () => {
         const response = await request(app)
-            .post('/api/v1/estates/create')
+            .post('/api/v1/providers/create')
             .set('Authorization', `Bearer ${providerToken}`)
             .send({ ...providerPayload, categoryId})
 
@@ -106,7 +113,7 @@ describe('POST /api/v1/providers/create', () => {
     it('returns 403 when user is not a provider', async () => {
         const response = await request(app)
             .post('/api/v1/providers/create')
-            .set('Authorization', `Bearer ${providerToken}`)
+            .set('Authorization', `Bearer ${residentToken}`)
             .send({ ...providerPayload, categoryId})
 
 
@@ -116,24 +123,24 @@ describe('POST /api/v1/providers/create', () => {
 
     it('returns 409 when provider profile  already exists', async () => {
         const response = await request(app)
-            .post('/api/v1/estates/create')
+            .post('/api/v1/providers/create')
             .set('Authorization', `Bearer ${providerToken}`)
-            .send({ ...providerPayload, providerId})
+            .send(providerPayload)
 
         expect(response.status).toBe(409)
         expect(response.body.success).toBe(false)
 
     })
-    it ('returns 400 when required fields are missing', async () =>{
+    it ('returns 404 when category does not exist', async () =>{
         const response = await request(app)
-            .post('/api/v1/estates/create')
+            .post('/api/v1/providers/create')
             .set('Authorization', `Bearer ${providerToken}`)
             .send({
                 ...providerPayload,
                 categoryId: '00000000-0000-0000-0000-000000000000'
 
             })
-        expect(response.status).toBe(400)
+        expect(response.status).toBe(404)
         expect(response.body.success).toBe(false)
     })
 })
@@ -186,5 +193,7 @@ describe('GET /api/v1/providers/list', () => {
       expect(response.status).toBe(200)
       expect(response.body.data).toEqual([])
       expect(response.body.meta.total).toBe(0)
+
     })
+
   })
