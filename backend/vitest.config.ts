@@ -6,6 +6,7 @@ export default defineConfig({
    
     pool: 'forks',
     testTimeout: 15000,
+    fileParallelism: false, //ensures that all tests do not hit the database at the same time 
     globals: true,
     env: {
       NODE_ENV: 'test',
