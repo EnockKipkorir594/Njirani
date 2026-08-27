@@ -3,7 +3,7 @@ import request from 'supertest'
 import { createTestApp } from '../../tests/helpers/app.js'
 import prisma from '../../config/database.js'
 import { signAccessToken } from '../../utils/jwt.js'
-import { cleanDatabase } from '../../tests/helpers/cleanup.js'
+
 
 const app = createTestApp()
 
