@@ -1,0 +1,43 @@
+name: "CodeQL Analysis"
+
+on:
+  push:
+    branches: [ "development" ]
+  pull_request:
+    branches: [ "development" ]
+  schedule:
+    # Run every Sunday at 00:00 UTC to catch newly disclosed vulnerabilities
+    - cron: '0 0 * * 0'
+
+jobs:
+  analyze:
+    name: Analyze Code
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Analyzes both your Python backend and TypeScript frontend code
+        language: [ 'javascript-typescript', 'python' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Initializes the CodeQL tools and creates a matrix run for each language
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        # Optional: Use extended security queries for deeper vulnerability scans
+        queries: security-extended
+
+    # Performs the actual static code analysis
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
