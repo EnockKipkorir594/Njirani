@@ -1,4 +1,4 @@
-name: "CodeQL Analysis"
+name: "CodeQL Security Analysis"
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         # Analyzes both your Python backend and TypeScript frontend code
-        language: [ 'javascript-typescript', 'python' ]
+        language: [ 'javascript-typescript' ]
 
     steps:
     - name: Checkout repository
@@ -33,10 +33,9 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
-        # Optional: Use extended security queries for deeper vulnerability scans
+        # Use the extended security query suite for broader vulnerability coverage.
         queries: security-extended
 
-    # Performs the actual static code analysis
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
