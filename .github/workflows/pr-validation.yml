@@ -141,7 +141,7 @@ jobs:
         run: docker build -t njirani-backend:test ./backend
 
       - name: Scan Docker Image
-        uses: aquasecurity/trivy-action@v0.34.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: njirani-backend:test
           format: table
