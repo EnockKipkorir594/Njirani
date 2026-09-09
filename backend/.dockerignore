@@ -1,5 +1,13 @@
 node_modules
+.npm
 dist
 src/generated/prisma
+
 .env
-.env.local
+.env.*
+!.env.example
+
+.git
+.gitignore
+
+npm-debug.log*
