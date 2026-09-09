@@ -2,8 +2,11 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Upgrade npm to a version with patched transitive dependencies
-RUN npm install -g npm@10.9.9
+# Patch Debian packages and upgrade npm
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g npm@10.9.9
 
 COPY package*.json ./
 
