@@ -128,14 +128,23 @@ jobs:
         run: npm test
 
   # JOB 5: Docker Build 
-  docker-build:
-    name: Build Docker Image
+  container-security:
+    name: Build and Scan Docker Image
     runs-on: ubuntu-latest
-    needs: [lint,secret-scan,dependency-scan,test]
-    
+    needs: [lint, secret-scan, dependency-scan, test]
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Build Docker Image
-      run: docker build -t njirani-backend:test ./backend 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -t njirani-backend:test ./backend
+
+      - name: Scan Docker Image
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: njirani-backend:test
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true

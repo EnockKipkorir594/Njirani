@@ -1,19 +1,21 @@
 FROM node:20-slim
+
 WORKDIR /app
 
-# Install dependencies first (cached layer)
+# Patch Debian packages and upgrade npm
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g npm@10.9.9
+
 COPY package*.json ./
-RUN npm install
 
-# Copy source (for initial build)
+RUN npm ci && npm cache clean --force
+
 COPY . .
-
-
-#ENV DATABASE_URL="postgresql://njirani:njirani_dev_pass@localhost:5432/njirani?schema=public"
-# Generate Prisma client
-#RUN npx prisma generate
 
 EXPOSE 3000
 
 ENTRYPOINT ["/app/entrypoint.sh"]
+
 CMD ["npm", "run", "dev"]

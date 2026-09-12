@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Analyzes both your Python backend and TypeScript frontend code
+        # Analyzes TypeScript backend
         language: [ 'javascript-typescript' ]
 
     steps:
