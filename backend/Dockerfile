@@ -1,5 +1,5 @@
 # Use the latest Node.js 22 LTS slim image
-FROM node:22-slim
+FROM node:22-trixie-slim
 
 WORKDIR /app
 
