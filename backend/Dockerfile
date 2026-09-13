@@ -1,15 +1,29 @@
-# ---- build stage: npm lives and dies here ----
+# ---- build stage ----
     FROM node:22-trixie-slim AS build
     WORKDIR /app
     
     RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/* \
         && npm install -g npm@latest
     
+    # Approve install scripts npm 11 blocks (native builds) BEFORE installing
     COPY package*.json ./
-    RUN npm ci --omit=dev && npm cache clean --force
-    COPY . .
+    COPY package*.json ./
+    RUN npm ci \
+        && npm install-scripts approve bcrypt @prisma/engines prisma \
+        && npm rebuild bcrypt @prisma/engines prisma \
+        && npm cache clean --force
     
-    # ---- runtime stage: no npm, no npx, no corepack ----
+ 
+    # Compile TypeScript and generate the Prisma client
+    COPY . .
+    RUN DATABASE_URL="postgresql://build:build@localhost:5432/build_db" \
+        npx prisma generate \
+        && npm run build
+    
+    # Strip devDependencies so only production node_modules reaches the runtime stage
+    RUN npm prune --omit=dev
+    
+    # ---- runtime stage ----
     FROM node:22-trixie-slim
     WORKDIR /app
     
