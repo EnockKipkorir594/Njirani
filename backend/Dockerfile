@@ -1,21 +1,23 @@
+# Use the latest Node.js 22 LTS slim image
 FROM node:22-slim
 
 WORKDIR /app
 
-# Patch Debian packages and upgrade npm
+# Upgrade system packages to patch Debian-level vulnerabilities
+# Upgrade npm to latest stable to fix bundled dependency vulnerabilities
 RUN apt-get update \
     && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install -g npm@12.0.2
+    && npm install -g npm@latest
 
+# Copy dependency manifests first for Docker layer caching
 COPY package*.json ./
 
-RUN npm ci && npm cache clean --force
+# Install production dependencies only
+RUN npm ci --omit=dev && npm cache clean --force
 
 COPY . .
 
-EXPOSE 3000
+EXPOSE 8000
 
-ENTRYPOINT ["/app/entrypoint.sh"]
-
-CMD ["npm", "run", "dev"]
+CMD ["node", "dist/index.js"]
