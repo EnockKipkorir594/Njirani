@@ -17,10 +17,11 @@
     # Compile TypeScript and generate the Prisma client
     COPY . .
     RUN DATABASE_URL="postgresql://build:build@localhost:5432/build_db" \
-        npx prisma generate \
-        && npm run build
-    
-    # Strip devDependencies so only production node_modules reaches the runtime stage
+    npx prisma generate \
+    && npm run build \
+    && mkdir -p dist/generated \
+    && cp -r src/generated/prisma dist/generated/
+
     RUN npm prune --omit=dev
     
     # ---- runtime stage ----
