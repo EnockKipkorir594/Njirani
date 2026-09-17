@@ -53,7 +53,4 @@ and handymen.
 **Estate managers(Admins)** - managers of estates or apartment complexes who want oversight of services being requested
 and fulfilled within their property, and who want ensure residents are getting quality service from verified providers.
 
-## The goal 
-Njirani exists to make getting a reliable service in your neighbourhood as easy as ordering food online.Fast, fair 
-and fully accountable - where quality poviders earn more, residents get better service, and no one has to ask in a WhatsApp 
-group ever again.
+
