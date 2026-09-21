@@ -21,10 +21,16 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: njirani-github-deployer@njirani-prod.iam.gserviceaccount.com
 
-      - name: Verify Google Cloud authentication
+      - name: Verify GCP and Artifact Registry access
         run: |
-          echo "Authenticated service account:"
-          gcloud auth print-access-token >/dev/null
-          echo "GCP authentication successful."
+          echo "Testing federated GCP credentials..."
 
-          
+          gcloud auth print-access-token > /dev/null
+
+          echo "Testing Artifact Registry access..."
+
+          gcloud artifacts repositories describe njirani \
+            --location=africa-south1 \
+            --project=njirani-prod
+
+          echo "GCP and Artifact Registry access successful."
