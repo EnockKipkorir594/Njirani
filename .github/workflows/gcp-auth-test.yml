@@ -26,3 +26,5 @@ jobs:
           echo "Authenticated service account:"
           gcloud auth print-access-token >/dev/null
           echo "GCP authentication successful."
+
+          
