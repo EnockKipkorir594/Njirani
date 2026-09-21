@@ -34,3 +34,6 @@ jobs:
             --project=njirani-prod
 
           echo "GCP and Artifact Registry access successful."
+
+
+          
