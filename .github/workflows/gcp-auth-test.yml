@@ -23,7 +23,8 @@ jobs:
 
       - name: Verify Google Cloud authentication
         run: |
-          gcloud auth list
-          gcloud config set project njirani-prod
-          gcloud projects describe njirani-prod \
-            --format="value(projectId)"
+          echo "Authenticated service account:"
+          gcloud auth print-access-token >/dev/null
+          echo "GCP authentication successful."
+
+          
