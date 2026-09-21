@@ -1,31 +1,29 @@
-name: GCP Authentication Test 
+name: GCP Authentication Test
 
-on: 
+on:
   workflow_dispatch:
 
-jobs: 
+jobs:
   authenticate:
     runs-on: ubuntu-latest
 
     permissions:
-      content: read
-      id-token: write 
+      contents: read
+      id-token: write
 
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    steps: 
-      - name: checkout 
-      - uses: actions/checkout@v4 
-
-
-      - name: authenticate to Google Cloud 
-      - uses: google-github-actions/auth@v3 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: njirani-github-deployer@njirani-prod.iam.gserviceaccount.com
 
-
-      - name: Verify Google Cloud authentication 
-        run: | 
-          gcloud auth list 
-          gcloud config set project njirani-prod 
-          gcloud projects describe njirani --format="value(projectId)"
+      - name: Verify Google Cloud authentication
+        run: |
+          gcloud auth list
+          gcloud config set project njirani-prod
+          gcloud projects describe njirani-prod \
+            --format="value(projectId)"
