@@ -1,0 +1,30 @@
+apiVersion: deploy.cloud.google.com/v1
+kind: DeliveryPipeline
+metadata:
+  name: njirani-backend-pipeline
+
+description: Njirani backend deployment pipeline
+
+serialPipeline:
+  stages:
+    - targetId: production
+
+---
+apiVersion: deploy.cloud.google.com/v1
+kind: Target
+metadata:
+  name: production
+
+description: Njirani production Cloud Run service
+
+requireApproval: false
+
+run:
+  location: projects/njirani-prod/locations/africa-south1
+
+executionConfigs:
+  - usages:
+      - RENDER
+      - DEPLOY
+    defaultPool:
+      serviceAccount: njirani-cloud-deploy@njirani-prod.iam.gserviceaccount.com

@@ -1,0 +1,63 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+    run.googleapis.com/maxScale: '12'
+    run.googleapis.com/urls: '["https://njirani-backend-189445761845.africa-south1.run.app","https://njirani-backend-sdyvrkejoq-bq.a.run.app"]'
+  labels:
+    cloud.googleapis.com/location: africa-south1
+    run.googleapis.com/satisfiesPzs: 'true'
+  name: njirani-backend
+  namespace: '189445761845'
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: '12'
+        run.googleapis.com/client-name: gcloud
+        run.googleapis.com/client-version: 584.0.0
+        run.googleapis.com/cloudsql-instances: njirani-prod:africa-south1:njirani-prod-db
+        run.googleapis.com/startup-cpu-boost: 'true'
+      labels:
+        client.knative.dev/nonce: vlkekewygr
+        run.googleapis.com/startupProbeType: Default
+    spec:
+      containerConcurrency: 80
+      containers:
+      - env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: DATABASE_URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: JWT_SECRET
+        - name: JWT_REFRESH_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: JWT_REFRESH_SECRET
+        image: backend-image
+        ports:
+        - containerPort: 8000
+          name: http1
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        startupProbe:
+          failureThreshold: 1
+          periodSeconds: 240
+          tcpSocket:
+            port: 8000
+          timeoutSeconds: 240
+      serviceAccountName: njirani-runtime@njirani-prod.iam.gserviceaccount.com
+      timeoutSeconds: 300
+  traffic:
+  - latestRevision: true
+    percent: 100
