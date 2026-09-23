@@ -30,7 +30,7 @@ the platform.The best providers rise to the top and get more work. The poor ones
 
 ## The problems Njirani solves 
 **For Residents**
-- No more posting on whatsapp and waiing for someone to reply
+- No more posting on whatsapp and waiing for someone to reply to your text.
 - No more hiring strangers with zero track record.
 - No more cash negotiations at the door.
 - Instant access to vetted, rated, nearby service providers.
