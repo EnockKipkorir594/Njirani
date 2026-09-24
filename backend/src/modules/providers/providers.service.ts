@@ -2,6 +2,7 @@ import { ProviderInput } from "./providers.schema.js";
 import { Prisma } from "../../generated/prisma/index.js";
 import prisma from "../../config/database.js";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../utils/errors.js";
+import { findProviderIdsWithinRadius } from "../geospatial/geospatial.service.js";
 
 
 export async function createProviderProfile(
@@ -11,7 +12,7 @@ export async function createProviderProfile(
     //check if user actually exists using userId
     const user = await prisma.user.findUnique({
         where : {
-            id : userId,
+            id:userId,
         }
     })
 
@@ -25,10 +26,23 @@ export async function createProviderProfile(
         throw new ForbiddenError('Only proiders can create provider profiles')
     }
 
+
+    //check if the service category exists 
+    const category = await prisma.serviceCategory.findUnique({
+        where: {
+            id : providerData.categoryId
+            }
+    })
+    
+    //If category does not exist throw a not found error
+    if (!category) {
+        throw new NotFoundError('service category not found ')
+    }
+
     //check if provider  profile already exists 
     const existingProfile = await prisma.providerProfile.findUnique({
         where : {
-            id: userId,
+            userId,
         },
     })
 
@@ -36,17 +50,7 @@ export async function createProviderProfile(
         throw new ConflictError('Provider profile alread exists')
     }
 
-    //check if the service category exists 
-    const category = await prisma.serviceCategory.findUnique({
-        where: {
-            id : providerData.categoryId
-        }
-    })
 
-    //If category does not exist throw a not found error
-    if (!category) {
-        throw new NotFoundError('service category not found ')
-    }
 
     const createdProfile = await prisma.providerProfile.create({
         data : {
@@ -82,11 +86,13 @@ export async function createProviderProfile(
 export async function listProviderProfiles(filters: {
     categoryId?: string;
     categorySlug?: string;
-    search?:string;
-    page?:number;
-    limit?:number;
+    search?: string;
+    page?: number;
+    limit?: number;
     sortBy?: 'rating' | 'newest';
-
+    lat?: number;
+    lng?: number;
+    radiusKm?: number;
 
 }){
     const page = Math.max(1, filters.page ?? 1)
@@ -95,6 +101,20 @@ export async function listProviderProfiles(filters: {
 
     //Build the where clause dynamically
     const where: Prisma.ProviderProfileWhereInput = {}
+
+    let nearbyProviderIds: string[] | undefined;
+
+    if (filters.lat !== undefined && filters.lng !== undefined) {
+      nearbyProviderIds = await findProviderIdsWithinRadius(
+        filters.lat,
+        filters.lng,
+        filters.radiusKm ?? 5,
+      );
+
+      where.id = {
+        in: nearbyProviderIds,
+      };
+    }
 
     if (filters.categoryId) {
         where.categoryId = filters.categoryId
