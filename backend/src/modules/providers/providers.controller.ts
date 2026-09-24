@@ -50,6 +50,9 @@ export async function createProviderHandler(
         page: query.page,
         limit: query.limit,
         sortBy: query.sortBy,
+        lat: query.lat,
+        lng: query.lng,
+        radiusKm: query.radiusKm,
       });
   
       res.status(200).json(
