@@ -1,7 +1,7 @@
 ## What is Njirani 
 Njirani is a neighbourhood services platform that connects members of an estate or a 
-gated community with trusted local service providers - plumbers, electrician,cleaners,
-house helps,painters and more - all within their immediate area.
+gated community with trusted local service providers - plumbers, electricians,cleaners,
+house helps,painters, movers and more - all within their immediate area.
 
 ## The problem it solves 
 Right now when a pipe bursts at 9am or a light fitting stops working most kenyans do the 
