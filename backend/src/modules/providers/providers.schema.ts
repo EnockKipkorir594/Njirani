@@ -46,7 +46,7 @@ export const listProvidersQuerySchema = z
       .transform((v) => (v ? parseInt(v, 10) : 20)),
 
     sortBy: z
-      .enum(['rating', 'newest'])
+      .enum(['rating', 'newest', 'distance'])
       .optional()
       .default('newest'),
 
@@ -96,6 +96,15 @@ export const listProvidersQuerySchema = z
         path: ['lat'],
         message: 'Latitude and longitude must be provided together',
       });
+    }
+
+    if (data.sortBy === 'distance' && (!hasLat || !hasLng)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['sortBy'],
+        message: 'Latitude and longitude are required when sorting by distance',
+      });
+
     }
   });
   

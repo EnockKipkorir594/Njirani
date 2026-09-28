@@ -313,6 +313,8 @@ describe('GET /api/v1/providers/list', () => {
         });
 
         farProviderId = farProvider.id;
+
+      
     });
 
     afterAll(async () => {
@@ -346,6 +348,7 @@ describe('GET /api/v1/providers/list', () => {
                 id: geospatialCategoryId,
             },
         });
+
     });
 
     it('returns providers within the requested radius', async () => {
@@ -453,5 +456,117 @@ describe('GET /api/v1/providers/list', () => {
             total: 0,
             totalPages: 0,
         });
+    });
+
+    it('returns distanceKm when geographic filtering is used', async () => {
+        const response = await request(app)
+            .get('/api/v1/providers/list')
+            .query({
+                lat: -1.2921,
+                lng: 36.8219,
+                radiusKm: 5,
+            });
+    
+        expect(response.status).toBe(200);
+    
+        expect(response.body.data.length).toBeGreaterThan(0);
+    
+        expect(response.body.data[0]).toHaveProperty('distanceKm');
+        expect(response.body.data[0].distanceKm).toEqual(
+            expect.any(Number),
+        );
+    });
+
+    it('sorts providers by distance when sortBy=distance', async () => {
+        // Create a second nearby estate.
+        // The existing nearby estate is exactly at the search point (0 km),
+        // so this second estate will give us a real distance to compare.
+        const secondNearbyEstate = await prisma.estate.create({
+            data: {
+                name: 'Geo Second Nearby Estate',
+                adminId: '00000000-0000-0000-0000-000000000000',
+            },
+        });
+    
+        // Roughly 2 km east of the search point.
+        await prisma.$executeRaw`
+            UPDATE estates
+            SET location = ST_SetSRID(
+                ST_MakePoint(${36.8420}, ${-1.2921}),
+                4326
+            )
+            WHERE id = ${secondNearbyEstate.id}
+        `;
+    
+        const secondNearbyUser = await prisma.user.create({
+            data: {
+                name: 'Geo Second Nearby Provider',
+                email: `geo-second-nearby-${Date.now()}@test.njirani`,
+                phone: `+254733${Date.now().toString().slice(-6)}`,
+                passwordHash: 'test-hash',
+                role: 'PROVIDER',
+                estateId: secondNearbyEstate.id,
+            },
+        });
+    
+        const secondNearbyProvider = await prisma.providerProfile.create({
+            data: {
+                userId: secondNearbyUser.id,
+                categoryId: geospatialCategoryId,
+                bio: 'Second nearby geospatial plumber',
+            },
+        });
+    
+        try {
+            const response = await request(app)
+                .get('/api/v1/providers/list')
+                .query({
+                    lat: -1.2921,
+                    lng: 36.8219,
+                    radiusKm: 5,
+                    sortBy: 'distance',
+                });
+    
+            expect(response.status).toBe(200);
+    
+            const providers = response.body.data;
+    
+            expect(providers).toHaveLength(2);
+    
+            expect(providers[0].distanceKm)
+                .toBeLessThan(providers[1].distanceKm);
+    
+            expect(providers[0].id).toBe(nearbyProviderId);
+    
+            expect(providers[1].id).toBe(secondNearbyProvider.id);
+        } finally {
+            await prisma.providerProfile.delete({
+                where: {
+                    id: secondNearbyProvider.id,
+                },
+            });
+    
+            await prisma.user.delete({
+                where: {
+                    id: secondNearbyUser.id,
+                },
+            });
+    
+            await prisma.estate.delete({
+                where: {
+                    id: secondNearbyEstate.id,
+                },
+            });
+        }
+    });
+
+    it('returns 400 when sortBy=distance is used without coordinates', async () => {
+        const response = await request(app)
+            .get('/api/v1/providers/list')
+            .query({
+                sortBy: 'distance',
+            });
+    
+        expect(response.status).toBe(400);
     });
 });
