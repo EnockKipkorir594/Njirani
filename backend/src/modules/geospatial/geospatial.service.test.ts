@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterAll } from "vitest";
 
 import prisma from "../../config/database.js";
-import { findProviderIdsWithinRadius } from "./geospatial.service.js";
+import { findProvidersWithinRadius } from "./geospatial.service.js";
 
 describe("geospatial.service", () => {
   beforeEach(async () => {
@@ -117,13 +117,18 @@ describe("geospatial.service", () => {
     // ------------------------------------------------------------
     // 6. Search from the nearby estate within 5 km
     // ------------------------------------------------------------
-    const providerIds = await findProviderIdsWithinRadius(
+    const nearbyProviders = await findProvidersWithinRadius(
       -1.2921,
       36.8219,
       5,
     );
 
-    expect(providerIds).toContain(nearbyProvider.id);
-    expect(providerIds).toHaveLength(1);
+    expect(nearbyProviders).toHaveLength(1);
+    expect(nearbyProviders).toEqual([
+      {
+        id: nearbyProvider.id,
+        distanceKm: expect.any(Number),
+      },
+    ]);
   });
 });
