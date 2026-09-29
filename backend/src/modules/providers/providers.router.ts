@@ -1,10 +1,11 @@
 import Router from 'express'
-import { createProviderHandler, listProvidersHandler } from './providers.controller.js'
+import { createProviderHandler,updateProviderHandler, listProvidersHandler } from './providers.controller.js'
 import { authenticate } from '../../middleware/auth.middleware.js'
 const providerRouter = Router()
 
 providerRouter.post('/create', authenticate, createProviderHandler)
 
+providerRouter.patch('/:id', authenticate, updateProviderHandler)
 
 providerRouter.get('/list', listProvidersHandler)
 

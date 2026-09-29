@@ -2,8 +2,12 @@ import { Router } from "express";
 import { loginHandler, refreshHandler, registerHandler } from "./auth.controller.js";
 import { authenticate, requireRole } from "../../middleware/auth.middleware.js";
 import { UserRole } from "../../generated/prisma/index.js";
+import { authLimiter } from '../../middleware/rateLimit.middleware.js';
 
 const authRouter = Router();
+
+// Apply to the whole router (register, login, refresh)
+authRouter.use(authLimiter);
 
 //pass in registerhandler to register a new user 
 authRouter.post('/register', registerHandler)

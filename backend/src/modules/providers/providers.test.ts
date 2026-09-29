@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest'
 import request from 'supertest'
 import { createTestApp } from '../../tests/helpers/app.js'
 import prisma from '../../config/database.js'
@@ -144,6 +144,366 @@ describe('POST /api/v1/providers/create', () => {
         expect(response.body.success).toBe(false)
     })
 })
+
+describe('PATCH /api/v1/providers/:id', () => {
+    let editProviderId: string;
+    let editProviderToken: string;
+    let editProviderProfileId: string;
+
+    let otherProviderId: string;
+    let otherProviderToken: string;
+
+    let updatedCategoryId: string;
+
+    const ORIGINAL_BIO =
+        'Original provider bio with enough length';
+
+    const ORIGINAL_SERVICE_RADIUS = 5;
+
+    const ORIGINAL_AVAILABILITY = {
+        monday: ['09:00-17:00'],
+        tuesday: ['09:00-17:00'],
+    };
+
+    beforeAll(async () => {
+        // ------------------------------------------------------------
+        // 1. Create a dedicated provider specifically for PATCH tests
+        // ------------------------------------------------------------
+        const editProvider = await prisma.user.create({
+            data: {
+                name: 'Provider Edit Test User',
+                email: `provider-edit-${Date.now()}@njirani.co.ke`,
+                phone: `+254700${Date.now().toString().slice(-6)}`,
+                passwordHash: 'dummyhashfortests',
+                role: 'PROVIDER',
+            },
+        });
+
+        editProviderId = editProvider.id;
+
+        editProviderToken = signAccessToken({
+            userId: editProvider.id,
+            role: editProvider.role,
+        });
+
+        // ------------------------------------------------------------
+        // 2. Create the provider profile being edited
+        // ------------------------------------------------------------
+        const profile = await prisma.providerProfile.create({
+            data: {
+                userId: editProvider.id,
+                categoryId,
+                bio: ORIGINAL_BIO,
+                serviceRadiusKm: ORIGINAL_SERVICE_RADIUS,
+                availability: ORIGINAL_AVAILABILITY,
+            },
+        });
+
+        editProviderProfileId = profile.id;
+
+        // ------------------------------------------------------------
+        // 3. Create a second category for category-update testing
+        // ------------------------------------------------------------
+        const updatedCategory = await prisma.serviceCategory.create({
+            data: {
+                name: `Electrical Editing Test ${Date.now()}`,
+                slug: `electrical-editing-test-${Date.now()}`,
+                icon: 'bolt',
+            },
+        });
+
+        updatedCategoryId = updatedCategory.id;
+
+        // ------------------------------------------------------------
+        // 4. Create another provider for ownership testing
+        // ------------------------------------------------------------
+        const otherProvider = await prisma.user.create({
+            data: {
+                name: 'Other Edit Provider',
+                email: `other-edit-provider-${Date.now()}@njirani.co.ke`,
+                phone: `+254799${Date.now().toString().slice(-6)}`,
+                passwordHash: 'dummyhashfortests',
+                role: 'PROVIDER',
+            },
+        });
+
+        otherProviderId = otherProvider.id;
+
+        otherProviderToken = signAccessToken({
+            userId: otherProvider.id,
+            role: otherProvider.role,
+        });
+    });
+
+    beforeEach(async () => {
+        // Reset the profile before every test so tests remain independent.
+        await prisma.providerProfile.update({
+            where: {
+                id: editProviderProfileId,
+            },
+            data: {
+                categoryId,
+                bio: ORIGINAL_BIO,
+                serviceRadiusKm: ORIGINAL_SERVICE_RADIUS,
+                availability: ORIGINAL_AVAILABILITY,
+            },
+        });
+    });
+
+    afterAll(async () => {
+        // Delete the dedicated PATCH test profile first.
+        await prisma.providerProfile.delete({
+            where: {
+                id: editProviderProfileId,
+            },
+        });
+
+        // Then delete the users created by this suite.
+        await prisma.user.deleteMany({
+            where: {
+                id: {
+                    in: [editProviderId, otherProviderId],
+                },
+            },
+        });
+
+        // Finally remove the category created specifically for this suite.
+        await prisma.serviceCategory.delete({
+            where: {
+                id: updatedCategoryId,
+            },
+        });
+    });
+
+    it('updates the provider profile and returns 200', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${editProviderToken}`)
+            .send({
+                bio: 'Updated bio: plumber with 10 years experience',
+                serviceRadiusKm: 12,
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+
+        expect(response.body.data.bio).toBe(
+            'Updated bio: plumber with 10 years experience',
+        );
+
+        expect(response.body.data.serviceRadiusKm).toBe(12);
+    });
+
+    it('supports partial updates', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${editProviderToken}`)
+            .send({
+                bio: 'Updated biography only',
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+
+        expect(response.body.data.bio).toBe(
+            'Updated biography only',
+        );
+
+        // Fields not included in the PATCH request remain unchanged.
+        expect(response.body.data.serviceRadiusKm).toBe(
+            ORIGINAL_SERVICE_RADIUS,
+        );
+
+        expect(response.body.data.categoryId).toBe(categoryId);
+    });
+
+    it('updates the provider category', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${editProviderToken}`)
+            .send({
+                categoryId: updatedCategoryId,
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+
+        expect(response.body.data.categoryId).toBe(
+            updatedCategoryId,
+        );
+
+        expect(response.body.data.category.id).toBe(
+            updatedCategoryId,
+        );
+    });
+
+    it('updates provider availability', async () => {
+        const newAvailability = {
+            monday: ['10:00-18:00'],
+            wednesday: ['09:00-15:00'],
+        };
+
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${editProviderToken}`)
+            .send({
+                availability: newAvailability,
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+
+        expect(response.body.data.availability).toEqual(
+            newAvailability,
+        );
+    });
+
+    it('returns 401 without authentication', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .send({
+                bio: 'Should not update without authentication',
+            });
+
+        expect(response.status).toBe(401);
+        expect(response.body.success).toBe(false);
+
+        const profile = await prisma.providerProfile.findUnique({
+            where: {
+                id: editProviderProfileId,
+            },
+        });
+
+        expect(profile?.bio).toBe(ORIGINAL_BIO);
+    });
+
+    it('returns 403 when a resident tries to update a provider profile', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${residentToken}`)
+            .send({
+                bio: 'Resident should not be able to update',
+            });
+
+        expect(response.status).toBe(403);
+        expect(response.body.success).toBe(false);
+
+        const profile = await prisma.providerProfile.findUnique({
+            where: {
+                id: editProviderProfileId,
+            },
+        });
+
+        expect(profile?.bio).toBe(ORIGINAL_BIO);
+    });
+
+    it('returns 403 when a provider tries to update another provider profile', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${otherProviderToken}`)
+            .send({
+                bio: 'Should not be allowed',
+            });
+
+        expect(response.status).toBe(403);
+        expect(response.body.success).toBe(false);
+
+        const profile = await prisma.providerProfile.findUnique({
+            where: {
+                id: editProviderProfileId,
+            },
+        });
+
+        expect(profile?.bio).toBe(ORIGINAL_BIO);
+    });
+
+    it('returns 404 when the profile does not exist', async () => {
+        const response = await request(app)
+            .patch(
+                '/api/v1/providers/00000000-0000-0000-0000-000000000000',
+            )
+            .set('Authorization', `Bearer ${editProviderToken}`)
+            .send({
+                bio: 'Profile does not exist',
+            });
+
+        expect(response.status).toBe(404);
+        expect(response.body.success).toBe(false);
+    });
+
+    it('returns 404 when the category does not exist', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${editProviderToken}`)
+            .send({
+                categoryId:
+                    '00000000-0000-0000-0000-000000000000',
+            });
+
+        expect(response.status).toBe(404);
+        expect(response.body.success).toBe(false);
+    });
+
+    it('returns 400 when categoryId is not a valid UUID', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${editProviderToken}`)
+            .send({
+                categoryId: 'not-a-valid-uuid',
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+    });
+
+    it('returns 400 when serviceRadiusKm exceeds the maximum allowed value', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${editProviderToken}`)
+            .send({
+                serviceRadiusKm: 30,
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+    });
+
+    it('returns 400 when serviceRadiusKm is below the minimum allowed value', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${editProviderToken}`)
+            .send({
+                serviceRadiusKm: 0,
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+    });
+
+    it('returns 400 when bio is too short', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${editProviderToken}`)
+            .send({
+                bio: 'short',
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+    });
+
+    it('returns 400 when bio is too long', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/providers/${editProviderProfileId}`)
+            .set('Authorization', `Bearer ${editProviderToken}`)
+            .send({
+                bio: 'a'.repeat(251),
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+    });
+});
 
 //list provider profiles tests 
 describe('GET /api/v1/providers/list', () => {

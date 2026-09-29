@@ -7,6 +7,7 @@ import { AppError } from './utils/errors.js';
 import { errorResponse } from './utils/response.js';
 import estateRouter from './modules/estates/estates.router.js';
 import providerRouter from './modules/providers/providers.router.js';
+import { generalLimiter } from './middleware/rateLimit.middleware.js';
 
 
 
@@ -16,6 +17,7 @@ const app = express()
 
 //body parsing middleware
 app.use(express.json())
+app.use(generalLimiter);
 
 //first Njirani route
 app.get('/', (req, res) => {
