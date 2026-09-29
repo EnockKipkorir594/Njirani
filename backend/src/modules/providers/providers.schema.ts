@@ -108,10 +108,28 @@ export const listProvidersQuerySchema = z
     }
   });
   
-  export type ListProvidersQuery = z.infer<typeof listProvidersQuerySchema>;
+export type ListProvidersQuery = z.infer<typeof listProvidersQuerySchema>;
     
 
-    
+export const updateProviderSchema = z.object({
+  categoryId: z.string({ message: 'categoryId must be a valid UUID' })
+      .uuid()
+      .optional(),
+
+  bio: z.string()
+      .min(10)
+      .max(250)
+      .optional(),
+
+  serviceRadiusKm: z.number()
+      .min(1)
+      .max(25)
+      .optional(),
+
+  availability: z.any().optional(),
+});    
+
+export type UpdateProviderInput = z.infer<typeof updateProviderSchema>
     
 
 

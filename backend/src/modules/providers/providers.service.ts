@@ -1,4 +1,4 @@
-import { ProviderInput } from "./providers.schema.js";
+import { ProviderInput, UpdateProviderInput} from "./providers.schema.js";
 import { Prisma } from "../../generated/prisma/index.js";
 import prisma from "../../config/database.js";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../utils/errors.js";
@@ -85,6 +85,105 @@ export async function createProviderProfile(
     return createdProfile;
 
 }
+
+
+export async function updateProviderProfile(
+    userId: string,
+    providerId: string,
+    providerData: UpdateProviderInput,
+) {
+    // 1. Verify the authenticated user exists
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+    });
+
+    if (!user) {
+        throw new NotFoundError('User not found');
+    }
+
+    // 2. Only PROVIDER users can update provider profiles
+    if (user.role !== 'PROVIDER') {
+        throw new ForbiddenError(
+            'Only providers can update provider profiles',
+        );
+    }
+
+    // 3. Find the provider profile being updated
+    const providerProfile = await prisma.providerProfile.findUnique({
+        where: {
+            id: providerId,
+        },
+    });
+
+    if (!providerProfile) {
+        throw new NotFoundError('Provider profile not found');
+    }
+
+    // 4. Verify ownership
+    if (providerProfile.userId !== userId) {
+        throw new ForbiddenError(
+            'You are not allowed to update this provider profile',
+        );
+    }
+
+    // 5. If categoryId is being changed, verify the category exists
+    if (
+        providerData.categoryId !== undefined &&
+        providerData.categoryId !== providerProfile.categoryId
+    ) {
+        const category = await prisma.serviceCategory.findUnique({
+            where: {
+                id: providerData.categoryId,
+            },
+        });
+
+        if (!category) {
+            throw new NotFoundError('Service category not found');
+        }
+    }
+
+    // 6. Update only the fields supplied by the client
+    const updatedProfile = await prisma.providerProfile.update({
+        where: {
+            id: providerId,
+        },
+        data: {
+            ...(providerData.categoryId !== undefined && {
+                categoryId: providerData.categoryId,
+            }),
+            ...(providerData.bio !== undefined && {
+                bio: providerData.bio,
+            }),
+            ...(providerData.serviceRadiusKm !== undefined && {
+                serviceRadiusKm: providerData.serviceRadiusKm,
+            }),
+            ...(providerData.availability !== undefined && {
+                availability: providerData.availability,
+            }),
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    role: true,
+                },
+            },
+            category: {
+                select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                },
+            },
+        },
+    });
+
+    return updatedProfile;
+}
+
 
 export async function listProviderProfiles(filters: {
     categoryId?: string;

@@ -1,5 +1,5 @@
-import { createProviderProfile, listProviderProfiles} from "./providers.service.js"
-import {  providerSchema, listProvidersQuerySchema } from "./providers.schema.js"
+import { createProviderProfile, updateProviderProfile, listProviderProfiles} from "./providers.service.js"
+import {  providerSchema, listProvidersQuerySchema, updateProviderSchema } from "./providers.schema.js"
 import { Request, Response, NextFunction } from "express"
 import { successResponse } from "../../utils/response.js";
 import { UnauthorizedError } from "../../utils/errors.js";
@@ -28,6 +28,45 @@ export async function createProviderHandler(
   
       res.status(201).json(
         successResponse(profile, 'Provider profile created successfully')
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  export async function updateProviderHandler(
+    req: Request<{ id : string }>,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      // 1. Make sure the request is authenticated
+      if (!req.user) {
+        return next(
+          new UnauthorizedError('Authentication required'),
+        );
+      }
+  
+      // 2. Get the provider profile ID from the URL
+      const providerId = req.params.id;
+  
+      // 3. Validate the update body
+      const parsedBody = updateProviderSchema.parse(req.body);
+  
+      // 4. Pass authenticated user + target profile + validated data
+      //    to the service layer.
+      const profile = await updateProviderProfile(
+        req.user.userId,
+        providerId,
+        parsedBody,
+      );
+  
+      // 5. Return the updated provider profile
+      return res.status(200).json(
+        successResponse(
+          profile,
+          'Provider profile updated successfully',
+        ),
       );
     } catch (error) {
       next(error);
