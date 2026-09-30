@@ -8,6 +8,7 @@ import { errorResponse } from './utils/response.js';
 import estateRouter from './modules/estates/estates.router.js';
 import providerRouter from './modules/providers/providers.router.js';
 import { generalLimiter } from './middleware/rateLimit.middleware.js';
+import bookingRouter from './modules/bookings/bookings.router.js';
 
 
 
@@ -59,6 +60,9 @@ app.use('/estates', estateRouter);
 
 //provider profile endpoints 
 app.use('/providers', providerRouter)
+
+//booking endpoints 
+app.use('/api/v1/bookings', bookingRouter)
 
 //404 handler 
 app.use((_req: Request, res: Response) => {
