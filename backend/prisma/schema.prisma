@@ -134,10 +134,10 @@ model Booking {
   categoryId    String
   category      ServiceCategory @relation(fields: [categoryId], references: [id])
   status        BookingStatus @default(PENDING)
-  scheduledAt   DateTime?
+  scheduledAt   DateTime
   priceQuote    Decimal?      @db.Decimal(10, 2)
   paymentStatus PaymentStatus @default(PENDING)
-  description   String?
+  description   String
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
