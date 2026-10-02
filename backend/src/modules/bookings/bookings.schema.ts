@@ -19,4 +19,42 @@ export const createBookingSchema = z.strictObject({
     .datetime('Must be a valid ISO datetime'),
 });
 
+//for the list bookings route
+export const listBookingsQuerySchema = z.object({
+  page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(1),
+
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .default(20),
+
+  status: z
+    .enum([
+      'PENDING',
+      'CONFIRMED',
+      'IN_PROGRESS',
+      'COMPLETED',
+      'CANCELLED',
+    ])
+    .optional(),
+
+});
+
+//for the get booking by id route
+export const bookingIdSchema = z.string().uuid(
+  'Booking ID must be a valid UUID',
+);
+
+export type BookingIdInput = z.infer<typeof bookingIdSchema>;
+
+export type ListBookingsQueryInput = z.infer<typeof listBookingsQuerySchema>;
+
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+
+

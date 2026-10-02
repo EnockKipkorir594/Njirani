@@ -1,6 +1,8 @@
-import { CreateBookingInput } from './bookings.schema.js';
+import { CreateBookingInput, ListBookingsQueryInput } from './bookings.schema.js';
 import prisma from '../../config/database.js';
 import { NotFoundError, ForbiddenError } from '../../utils/errors.js';
+import { Prisma } from '../../generated/prisma/index.js';
+
 
 export async function createBooking(
     residentId: string,
@@ -65,4 +67,159 @@ export async function createBooking(
     });
   
     return createdBooking;
+  }
+
+
+  export async function listBookings(
+    userId: string,
+    role: 'RESIDENT' | 'PROVIDER' | 'ADMIN',
+    filters: ListBookingsQueryInput,
+  ) {
+    const page = filters.page;
+    const limit = filters.limit;
+    const skip = (page - 1) * limit;
+  
+    const where: Prisma.BookingWhereInput = {};
+  
+    // ------------------------------------------------------------
+    // Determine which bookings the authenticated user is allowed
+    // to see.
+    // ------------------------------------------------------------
+  
+    if (role === 'RESIDENT') {
+      where.residentId = userId;
+    } else if (role === 'PROVIDER') {
+      where.providerId = userId;
+    } else {
+      throw new ForbiddenError(
+        'Only residents and providers can view bookings',
+      );
+    }
+  
+    // ------------------------------------------------------------
+    // Optional status filtering
+    // ------------------------------------------------------------
+  
+    if (filters.status) {
+      where.status = filters.status;
+    }
+  
+    // ------------------------------------------------------------
+    // Fetch bookings and total count using the exact same filter.
+    // ------------------------------------------------------------
+  
+    const [bookings, total] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        skip,
+        take: limit,
+  
+        orderBy: {
+          createdAt: 'desc',
+        },
+  
+        include: {
+          resident: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+  
+          provider: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+  
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+  
+          estate: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      }),
+  
+      prisma.booking.count({
+        where,
+      }),
+    ]);
+  
+    return {
+      bookings,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+//get booking by id
+export async function getBookingById(
+    userId: string,
+    bookingId: string,
+  ) {
+    const booking = await prisma.booking.findUnique({
+      where: {
+        id: bookingId,
+      },
+  
+      include: {
+        resident: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+  
+        provider: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+  
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+  
+        estate: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+  
+    if (!booking) {
+      throw new NotFoundError('Booking not found');
+    }
+  
+    const isResident = booking.residentId === userId;
+    const isProvider = booking.providerId === userId;
+  
+    if (!isResident && !isProvider) {
+      throw new ForbiddenError(
+        'You are not allowed to view this booking',
+      );
+    }
+  
+    return booking;
   }
