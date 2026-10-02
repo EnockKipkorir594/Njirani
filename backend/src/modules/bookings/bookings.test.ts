@@ -10,10 +10,17 @@ const app = createTestApp()
 let residentId: string;
 let residentToken: string;
 let providerToken: string;
+let providerUserId: string;
 let providerProfileId: string;
 let categoryId: string;
 let estateId: string;
 let noEstateResidentToken: string;
+let residentTwoId: string;
+let residentTwoToken: string;
+
+let providerTwoUserId: string;
+let providerTwoProfileId: string;
+let providerTwoToken: string;
 
 
 const timestamp = Date.now()
@@ -28,6 +35,27 @@ const bookingPayload = {
     description: DESCRIPTION,
     scheduledAt: SCHEDULED_AT,
 }
+
+
+async function createBookingFixture(
+    residentId: string,
+    providerUserId: string,
+    status: 'PENDING' | 'CONFIRMED' = 'PENDING',
+  ) {
+    return prisma.booking.create({
+      data: {
+        residentId,
+        providerId: providerUserId,
+        estateId,
+        categoryId,
+        description: `Booking fixture ${Date.now()} ${Math.random()}`,
+        scheduledAt: new Date('2026-12-10T10:00:00.000Z'),
+        status,
+        paymentStatus: 'PENDING',
+        priceQuote: null,
+      },
+    });
+  }
 
 beforeAll( async () => {
     await prisma.booking.deleteMany()
@@ -64,6 +92,7 @@ beforeAll( async () => {
             role: 'PROVIDER',
         }
     })
+    providerUserId = provider.id;
 
     const providerProfile = await prisma.providerProfile.create({
         data:{
@@ -101,12 +130,82 @@ beforeAll( async () => {
 
     noEstateResidentToken = signAccessToken({ userId: noEstateResident.id, role: noEstateResident.role })
 
+
+    const providerTwo = await prisma.user.create({
+        data: {
+          name: 'Booking Test Provider Two',
+          email: `provider-two-${timestamp}@njirani.co.ke`,
+          phone: `+254703${timestamp.toString().slice(-6)}`,
+          passwordHash: 'dummyhashfortests',
+          role: 'PROVIDER',
+          estateId,
+        },
+      });
+      
+    providerTwoUserId = providerTwo.id;
+    
+    providerTwoToken = signAccessToken({
+    userId: providerTwo.id,
+    role: providerTwo.role,
+    });
+    
+    const providerTwoProfile = await prisma.providerProfile.create({
+    data: {
+        userId: providerTwo.id,
+        categoryId,
+        bio: 'Second booking test provider',
+    },
+    });
+    
+    providerTwoProfileId = providerTwoProfile.id;
+
+    const residentTwo = await prisma.user.create({
+    data: {
+        name: 'Booking Test Resident Two',
+        email: `resident-two-${timestamp}@njirani.co.ke`,
+        phone: `+254704${timestamp.toString().slice(-6)}`,
+        passwordHash: 'dummyhashfortests',
+        role: 'RESIDENT',
+        estateId,
+    },
+    });
+    
+    residentTwoId = residentTwo.id;
+    
+    residentTwoToken = signAccessToken({
+    userId: residentTwo.id,
+    role: residentTwo.role,
+    });
+
 })
 
 afterAll( async () => {
-    await prisma.booking.deleteMany()
-    await prisma.providerProfile.deleteMany()
-    await prisma.user.deleteMany()
+    await prisma.booking.deleteMany({
+        where: {
+          residentId: {
+            in: [residentId, residentTwoId],
+          },
+        },
+      });
+    await prisma.providerProfile.deleteMany({
+    where: {
+        id: {
+        in: [providerProfileId, providerTwoProfileId],
+        },
+    },
+    });
+    await prisma.user.deleteMany({
+        where: {
+          id: {
+            in: [
+              residentId,
+              residentTwoId,
+              providerUserId,
+              providerTwoUserId,
+            ],
+          },
+        },
+      });
     await prisma.estate.deleteMany()
     await prisma.serviceCategory.deleteMany()
     await prisma.$disconnect()
@@ -229,3 +328,260 @@ describe('POST /api/v1/bookings', () => {
         expect(response.body.success).toBe(false)
     })
 })
+
+describe('GET /api/v1/bookings', () => {
+    let residentOneBookingA: string;
+    let residentOneBookingB: string;
+    let residentOneBookingC: string;
+    let residentTwoBooking: string;
+  
+    beforeAll(async () => {
+      /*
+       * Resident 1 → Provider 1
+    
+       */
+      await prisma.booking.deleteMany();
+      const bookingA = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'PENDING',
+      );
+  
+      residentOneBookingA = bookingA.id;
+  
+      /*
+       * Resident 1 → Provider 1
+       */
+      const bookingB = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'CONFIRMED',
+      );
+  
+      residentOneBookingB = bookingB.id;
+  
+      /*
+       * Resident 1 → Provider 2
+       */
+      const bookingC = await createBookingFixture(
+        residentId,
+        providerTwoUserId,
+        'PENDING',
+      );
+  
+      residentOneBookingC = bookingC.id;
+  
+      /*
+       * Resident 2 → Provider 1
+       */
+      const bookingD = await createBookingFixture(
+        residentTwoId,
+        providerUserId,
+        'PENDING',
+      );
+  
+      residentTwoBooking = bookingD.id;
+    });
+  
+    it('returns only bookings belonging to the authenticated resident', async () => {
+      const response = await request(app)
+        .get('/api/v1/bookings')
+        .set('Authorization', `Bearer ${residentToken}`);
+  
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+  
+      expect(response.body.data).toHaveLength(3);
+  
+      const bookingIds = response.body.data.map(
+        (booking: { id: string }) => booking.id,
+      );
+  
+      expect(bookingIds).toContain(residentOneBookingA);
+      expect(bookingIds).toContain(residentOneBookingB);
+      expect(bookingIds).toContain(residentOneBookingC);
+  
+      expect(bookingIds).not.toContain(residentTwoBooking);
+    });
+  
+    it('returns only bookings assigned to the authenticated provider', async () => {
+      const response = await request(app)
+        .get('/api/v1/bookings')
+        .set('Authorization', `Bearer ${providerToken}`);
+  
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+  
+      expect(response.body.data).toHaveLength(3);
+  
+      const bookingIds = response.body.data.map(
+        (booking: { id: string }) => booking.id,
+      );
+  
+      expect(bookingIds).toContain(residentOneBookingA);
+      expect(bookingIds).toContain(residentOneBookingB);
+      expect(bookingIds).toContain(residentTwoBooking);
+  
+      expect(bookingIds).not.toContain(residentOneBookingC);
+    });
+  
+    it('returns only bookings assigned to the second provider', async () => {
+      const response = await request(app)
+        .get('/api/v1/bookings')
+        .set('Authorization', `Bearer ${providerTwoToken}`);
+  
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+  
+      expect(response.body.data).toHaveLength(1);
+      expect(response.body.data[0].id).toBe(residentOneBookingC);
+    });
+  
+    it('filters resident bookings by status', async () => {
+      const response = await request(app)
+        .get('/api/v1/bookings')
+        .query({ status: 'PENDING' })
+        .set('Authorization', `Bearer ${residentToken}`);
+  
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+  
+      expect(response.body.data).toHaveLength(2);
+  
+      for (const booking of response.body.data) {
+        expect(booking.residentId).toBe(residentId);
+        expect(booking.status).toBe('PENDING');
+      }
+    });
+  
+    it('returns pagination metadata', async () => {
+      const response = await request(app)
+        .get('/api/v1/bookings')
+        .query({
+          page: 1,
+          limit: 2,
+        })
+        .set('Authorization', `Bearer ${residentToken}`);
+  
+      expect(response.status).toBe(200);
+  
+      expect(response.body.meta).toMatchObject({
+        page: 1,
+        limit: 2,
+        total: 3,
+        totalPages: 2,
+      });
+  
+      expect(response.body.data).toHaveLength(2);
+    });
+  
+    it('returns 401 when authentication is missing', async () => {
+      const response = await request(app)
+        .get('/api/v1/bookings');
+  
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+    });
+  
+    it('returns 403 when an ADMIN attempts normal booking listing', async () => {
+      const admin = await prisma.user.create({
+        data: {
+          name: 'Booking Test Admin',
+          email: `admin-booking-${timestamp}@njirani.co.ke`,
+          phone: `+254705${timestamp.toString().slice(-6)}`,
+          passwordHash: 'dummyhashfortests',
+          role: 'ADMIN',
+        },
+      });
+  
+      const adminToken = signAccessToken({
+        userId: admin.id,
+        role: admin.role,
+      });
+  
+      const response = await request(app)
+        .get('/api/v1/bookings')
+        .set('Authorization', `Bearer ${adminToken}`);
+  
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+  
+      await prisma.user.delete({
+        where: {
+          id: admin.id,
+        },
+      });
+    });
+
+
+
+    describe('GET /api/v1/bookings/:id', () => {
+    it('allows a resident to view their own booking', async () => {
+        const response = await request(app)
+        .get(`/api/v1/bookings/${residentOneBookingA}`)
+        .set('Authorization', `Bearer ${residentToken}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+
+        expect(response.body.data.id).toBe(residentOneBookingA);
+        expect(response.body.data.residentId).toBe(residentId);
+        expect(response.body.data.providerId).toBe(providerUserId);
+    });
+
+    it('allows the assigned provider to view the booking', async () => {
+        const response = await request(app)
+        .get(`/api/v1/bookings/${residentOneBookingA}`)
+        .set('Authorization', `Bearer ${providerToken}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+
+        expect(response.body.data.id).toBe(residentOneBookingA);
+    });
+
+    it('prevents another resident from viewing the booking', async () => {
+        const response = await request(app)
+        .get(`/api/v1/bookings/${residentOneBookingA}`)
+        .set('Authorization', `Bearer ${residentTwoToken}`);
+
+        expect(response.status).toBe(403);
+        expect(response.body.success).toBe(false);
+    });
+
+    it('prevents an unrelated provider from viewing the booking', async () => {
+        const response = await request(app)
+        .get(`/api/v1/bookings/${residentOneBookingA}`)
+        .set('Authorization', `Bearer ${providerTwoToken}`);
+
+        expect(response.status).toBe(403);
+        expect(response.body.success).toBe(false);
+    });
+
+    it('returns 404 when the booking does not exist', async () => {
+        const response = await request(app)
+        .get('/api/v1/bookings/00000000-0000-0000-0000-000000000000')
+        .set('Authorization', `Bearer ${residentToken}`);
+
+        expect(response.status).toBe(404);
+        expect(response.body.success).toBe(false);
+    });
+
+    it('returns 400 when the booking ID is not a valid UUID', async () => {
+        const response = await request(app)
+        .get('/api/v1/bookings/not-a-valid-uuid')
+        .set('Authorization', `Bearer ${residentToken}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+    });
+
+    it('returns 401 when authentication is missing', async () => {
+        const response = await request(app)
+        .get(`/api/v1/bookings/${residentOneBookingA}`);
+
+        expect(response.status).toBe(401);
+        expect(response.body.success).toBe(false);
+    });
+    });
+    });

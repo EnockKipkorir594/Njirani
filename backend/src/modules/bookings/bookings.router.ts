@@ -1,5 +1,6 @@
 import Router from 'express';
-import { createBookingHandler } from './bookings.controller.js';
+import { createBookingHandler, listBookingsHandler,
+    getBookingByIdHandler, } from './bookings.controller.js';
 import { authenticate, requireRole } from '../../middleware/auth.middleware.js';
 import { UserRole } from '../../generated/prisma/index.js';
 
@@ -12,5 +13,10 @@ bookingRouter.post(
     requireRole([UserRole.RESIDENT]),
     createBookingHandler,
 );
+
+bookingRouter.get('/', authenticate, listBookingsHandler);
+
+bookingRouter.get('/:id', authenticate, getBookingByIdHandler);
+
 
 export default bookingRouter;
