@@ -33,7 +33,7 @@ the platform.The best providers rise to the top and get more work. The poor ones
 - No more posting on whatsapp and waiing for someone to reply to your text.
 - No more hiring strangers with zero track record.
 - No more cash negotiations at the door.
-- Instant access to vetted, rated, nearby service providers.
+- Instant access to vetted, rated, trusted nearby service providers.
 
 **For service providers**
 - No more depending on a word of mouth or referrals to find work.
