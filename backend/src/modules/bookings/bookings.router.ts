@@ -1,6 +1,6 @@
 import Router from 'express';
 import { createBookingHandler, listBookingsHandler,
-    getBookingByIdHandler, } from './bookings.controller.js';
+    getBookingByIdHandler, acceptBookingHandler, declineBookingHandler } from './bookings.controller.js';
 import { authenticate, requireRole } from '../../middleware/auth.middleware.js';
 import { UserRole } from '../../generated/prisma/index.js';
 
@@ -15,6 +15,20 @@ bookingRouter.post(
 );
 
 bookingRouter.get('/', authenticate, listBookingsHandler);
+
+bookingRouter.patch(
+    '/:id/accept',
+    authenticate,
+    requireRole([UserRole.PROVIDER]),
+    acceptBookingHandler,
+);
+
+bookingRouter.patch(
+    '/:id/decline',
+    authenticate,
+    requireRole([UserRole.PROVIDER]),
+    declineBookingHandler,
+);
 
 bookingRouter.get('/:id', authenticate, getBookingByIdHandler);
 
