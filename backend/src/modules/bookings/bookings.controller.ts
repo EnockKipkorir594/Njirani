@@ -8,7 +8,7 @@ import {
 } from './bookings.schema.js';
 
 import { createBooking, listBookings,
-  getBookingById, } from './bookings.service.js';
+  getBookingById, acceptBooking, declineBooking} from './bookings.service.js';
 
 import { successResponse } from '../../utils/response.js';
 
@@ -95,6 +95,62 @@ export async function getBookingByIdHandler(
       successResponse(
         booking,
         'Booking retrieved successfully',
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function acceptBookingHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    if (!req.user) {
+      return next(new UnauthorizedError('Authentication required'));
+    }
+
+    const bookingId = bookingIdSchema.parse(req.params.id);
+
+    const booking = await acceptBooking(
+      req.user.userId,
+      bookingId,
+    );
+
+    return res.status(200).json(
+      successResponse(
+        booking,
+        'Booking accepted successfully',
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function declineBookingHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    if (!req.user) {
+      return next(new UnauthorizedError('Authentication required'));
+    }
+
+    const bookingId = bookingIdSchema.parse(req.params.id);
+
+    const booking = await declineBooking(
+      req.user.userId,
+      bookingId,
+    );
+
+    return res.status(200).json(
+      successResponse(
+        booking,
+        'Booking declined successfully',
       ),
     );
   } catch (error) {

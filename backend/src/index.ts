@@ -64,6 +64,8 @@ app.use('/providers', providerRouter)
 //booking endpoints 
 app.use('/api/v1/bookings', bookingRouter)
 
+
+
 //404 handler 
 app.use((_req: Request, res: Response) => {
     res.status(404).json({

@@ -1,6 +1,6 @@
 import { CreateBookingInput, ListBookingsQueryInput } from './bookings.schema.js';
 import prisma from '../../config/database.js';
-import { NotFoundError, ForbiddenError } from '../../utils/errors.js';
+import { NotFoundError, ForbiddenError, ConflictError } from '../../utils/errors.js';
 import { Prisma } from '../../generated/prisma/index.js';
 
 
@@ -223,3 +223,120 @@ export async function getBookingById(
   
     return booking;
   }
+
+//accept booking function to accept a booking by a provider
+export async function acceptBooking(
+  userId: string,
+  bookingId: string,
+) {
+  const booking = await prisma.booking.findUnique({
+    where: {
+      id: bookingId,
+    },
+    select: {
+      id: true,
+      providerId: true,
+      status: true,
+    },
+  });
+
+  if (!booking) {
+    throw new NotFoundError('Booking not found');
+  }
+
+  if (booking.providerId !== userId) {
+    throw new ForbiddenError(
+      'You are not allowed to accept this booking',
+    );
+  }
+
+  if (booking.status !== 'PENDING') {
+    throw new ConflictError(
+      'Only pending bookings can be accepted',
+    );
+  }
+
+  const result = await prisma.booking.updateMany({
+    where: {
+      id: bookingId,
+      providerId: userId,
+      status: 'PENDING',
+    },
+    data: {
+      status: 'CONFIRMED',
+    },
+  });
+
+  if (result.count === 0) {
+    throw new ConflictError(
+      'Booking is no longer pending',
+    );
+  }
+
+  const updatedBooking = await prisma.booking.findUnique({
+    where: {
+      id: bookingId,
+    },
+  });
+
+  return updatedBooking;
+}
+
+
+//decline booking function to decline a booking by a provider
+export async function declineBooking(
+  userId: string,
+  bookingId: string,
+) {
+  const booking = await prisma.booking.findUnique({
+    where: {
+      id: bookingId,
+    },
+    select: {
+      id: true,
+      providerId: true,
+      status: true,
+    },
+  });
+
+  if (!booking) {
+    throw new NotFoundError('Booking not found');
+  }
+
+  if (booking.providerId !== userId) {
+    throw new ForbiddenError(
+      'You are not allowed to decline this booking',
+    );
+  }
+
+  if (booking.status !== 'PENDING') {
+    throw new ConflictError(
+      'Only pending bookings can be declined',
+    );
+  }
+
+  const result = await prisma.booking.updateMany({
+    where: {
+      id: bookingId,
+      providerId: userId,
+      status: 'PENDING',
+    },
+    data: {
+      status: 'CANCELLED',
+    },
+  });
+
+  if (result.count === 0) {
+    throw new ConflictError(
+      'Booking is no longer pending',
+    );
+  }
+
+  const updatedBooking = await prisma.booking.findUnique({
+    where: {
+      id: bookingId,
+    },
+  });
+
+  return updatedBooking;
+}

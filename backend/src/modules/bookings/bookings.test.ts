@@ -515,73 +515,365 @@ describe('GET /api/v1/bookings', () => {
 
 
 
-    describe('GET /api/v1/bookings/:id', () => {
-    it('allows a resident to view their own booking', async () => {
-        const response = await request(app)
-        .get(`/api/v1/bookings/${residentOneBookingA}`)
-        .set('Authorization', `Bearer ${residentToken}`);
+describe('GET /api/v1/bookings/:id', () => {
+  it('allows a resident to view their own booking', async () => {
+      const response = await request(app)
+      .get(`/api/v1/bookings/${residentOneBookingA}`)
+      .set('Authorization', `Bearer ${residentToken}`);
 
-        expect(response.status).toBe(200);
-        expect(response.body.success).toBe(true);
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
 
-        expect(response.body.data.id).toBe(residentOneBookingA);
-        expect(response.body.data.residentId).toBe(residentId);
-        expect(response.body.data.providerId).toBe(providerUserId);
+      expect(response.body.data.id).toBe(residentOneBookingA);
+      expect(response.body.data.residentId).toBe(residentId);
+      expect(response.body.data.providerId).toBe(providerUserId);
+  });
+
+  it('allows the assigned provider to view the booking', async () => {
+      const response = await request(app)
+      .get(`/api/v1/bookings/${residentOneBookingA}`)
+      .set('Authorization', `Bearer ${providerToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+
+      expect(response.body.data.id).toBe(residentOneBookingA);
+  });
+
+  it('prevents another resident from viewing the booking', async () => {
+      const response = await request(app)
+      .get(`/api/v1/bookings/${residentOneBookingA}`)
+      .set('Authorization', `Bearer ${residentTwoToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('prevents an unrelated provider from viewing the booking', async () => {
+      const response = await request(app)
+      .get(`/api/v1/bookings/${residentOneBookingA}`)
+      .set('Authorization', `Bearer ${providerTwoToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 404 when the booking does not exist', async () => {
+      const response = await request(app)
+      .get('/api/v1/bookings/00000000-0000-0000-0000-000000000000')
+      .set('Authorization', `Bearer ${residentToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 400 when the booking ID is not a valid UUID', async () => {
+      const response = await request(app)
+      .get('/api/v1/bookings/not-a-valid-uuid')
+      .set('Authorization', `Bearer ${residentToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 401 when authentication is missing', async () => {
+      const response = await request(app)
+      .get(`/api/v1/bookings/${residentOneBookingA}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
     });
+});
 
-    it('allows the assigned provider to view the booking', async () => {
-        const response = await request(app)
-        .get(`/api/v1/bookings/${residentOneBookingA}`)
-        .set('Authorization', `Bearer ${providerToken}`);
+describe('PATCH /api/v1/bookings/:id/accept', () => {
+  it('allows the assigned provider to accept a pending booking', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
 
-        expect(response.status).toBe(200);
-        expect(response.body.success).toBe(true);
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/accept`)
+          .set('Authorization', `Bearer ${providerToken}`);
 
-        expect(response.body.data.id).toBe(residentOneBookingA);
-    });
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.id).toBe(booking.id);
+      expect(response.body.data.status).toBe('CONFIRMED');
+  });
 
-    it('prevents another resident from viewing the booking', async () => {
-        const response = await request(app)
-        .get(`/api/v1/bookings/${residentOneBookingA}`)
-        .set('Authorization', `Bearer ${residentTwoToken}`);
+  it('persists the accepted booking as CONFIRMED', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
 
-        expect(response.status).toBe(403);
-        expect(response.body.success).toBe(false);
-    });
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/accept`)
+          .set('Authorization', `Bearer ${providerToken}`);
 
-    it('prevents an unrelated provider from viewing the booking', async () => {
-        const response = await request(app)
-        .get(`/api/v1/bookings/${residentOneBookingA}`)
-        .set('Authorization', `Bearer ${providerTwoToken}`);
+      expect(response.status).toBe(200);
 
-        expect(response.status).toBe(403);
-        expect(response.body.success).toBe(false);
-    });
+      const updatedBooking = await prisma.booking.findUnique({
+          where: {
+              id: booking.id,
+          },
+      });
 
-    it('returns 404 when the booking does not exist', async () => {
-        const response = await request(app)
-        .get('/api/v1/bookings/00000000-0000-0000-0000-000000000000')
-        .set('Authorization', `Bearer ${residentToken}`);
+      expect(updatedBooking).not.toBeNull();
+      expect(updatedBooking?.status).toBe('CONFIRMED');
+  });
 
-        expect(response.status).toBe(404);
-        expect(response.body.success).toBe(false);
-    });
+  it('returns 401 when authentication is missing', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
 
-    it('returns 400 when the booking ID is not a valid UUID', async () => {
-        const response = await request(app)
-        .get('/api/v1/bookings/not-a-valid-uuid')
-        .set('Authorization', `Bearer ${residentToken}`);
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/accept`);
 
-        expect(response.status).toBe(400);
-        expect(response.body.success).toBe(false);
-    });
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+  });
 
-    it('returns 401 when authentication is missing', async () => {
-        const response = await request(app)
-        .get(`/api/v1/bookings/${residentOneBookingA}`);
+  it('returns 403 when a resident attempts to accept a booking', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
 
-        expect(response.status).toBe(401);
-        expect(response.body.success).toBe(false);
-    });
-    });
-    });
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/accept`)
+          .set('Authorization', `Bearer ${residentToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 403 when an unrelated provider attempts to accept the booking', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
+
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/accept`)
+          .set('Authorization', `Bearer ${providerTwoToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 404 when the booking does not exist', async () => {
+      const response = await request(app)
+          .patch(
+              '/api/v1/bookings/00000000-0000-0000-0000-000000000000/accept',
+          )
+          .set('Authorization', `Bearer ${providerToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 400 when the booking ID is not a valid UUID', async () => {
+      const response = await request(app)
+          .patch('/api/v1/bookings/not-a-valid-uuid/accept')
+          .set('Authorization', `Bearer ${providerToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 409 when attempting to accept an already confirmed booking', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'CONFIRMED',
+      );
+
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/accept`)
+          .set('Authorization', `Bearer ${providerToken}`);
+
+      expect(response.status).toBe(409);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 409 when attempting to accept a cancelled booking', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
+
+      await prisma.booking.update({
+          where: {
+              id: booking.id,
+          },
+          data: {
+              status: 'CANCELLED',
+          },
+      });
+
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/accept`)
+          .set('Authorization', `Bearer ${providerToken}`);
+
+      expect(response.status).toBe(409);
+      expect(response.body.success).toBe(false);
+  });
+});
+
+describe('PATCH /api/v1/bookings/:id/decline', () => {
+  it('allows the assigned provider to decline a pending booking', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
+
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/decline`)
+          .set('Authorization', `Bearer ${providerToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.id).toBe(booking.id);
+      expect(response.body.data.status).toBe('CANCELLED');
+  });
+
+  it('persists the declined booking as CANCELLED', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
+
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/decline`)
+          .set('Authorization', `Bearer ${providerToken}`);
+
+      expect(response.status).toBe(200);
+
+      const updatedBooking = await prisma.booking.findUnique({
+          where: {
+              id: booking.id,
+          },
+      });
+
+      expect(updatedBooking).not.toBeNull();
+      expect(updatedBooking?.status).toBe('CANCELLED');
+  });
+
+  it('returns 401 when authentication is missing', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
+
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/decline`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 403 when a resident attempts to decline a booking', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
+
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/decline`)
+          .set('Authorization', `Bearer ${residentToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 403 when an unrelated provider attempts to decline the booking', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
+
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/decline`)
+          .set('Authorization', `Bearer ${providerTwoToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 404 when the booking does not exist', async () => {
+      const response = await request(app)
+          .patch(
+              '/api/v1/bookings/00000000-0000-0000-0000-000000000000/decline',
+          )
+          .set('Authorization', `Bearer ${providerToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 400 when the booking ID is not a valid UUID', async () => {
+      const response = await request(app)
+          .patch('/api/v1/bookings/not-a-valid-uuid/decline')
+          .set('Authorization', `Bearer ${providerToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 409 when attempting to decline an already confirmed booking', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'CONFIRMED',
+      );
+
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/decline`)
+          .set('Authorization', `Bearer ${providerToken}`);
+
+      expect(response.status).toBe(409);
+      expect(response.body.success).toBe(false);
+  });
+
+  it('returns 409 when attempting to decline an already cancelled booking', async () => {
+      const booking = await createBookingFixture(
+          residentId,
+          providerUserId,
+          'PENDING',
+      );
+
+      await prisma.booking.update({
+          where: {
+              id: booking.id,
+          },
+          data: {
+              status: 'CANCELLED',
+          },
+      });
+
+      const response = await request(app)
+          .patch(`/api/v1/bookings/${booking.id}/decline`)
+          .set('Authorization', `Bearer ${providerToken}`);
+
+      expect(response.status).toBe(409);
+      expect(response.body.success).toBe(false);
+  });
+});
+
+});
+
