@@ -42,7 +42,7 @@ the platform.The best providers rise to the top and get more work. The poor ones
 - GUaranteed payment via M-PESA the moment a job is confirmed complete.
 
 ## Who uses Njirani 
-**Residents(clients)** - people living in estates, apartments, or living in gated communities who need
+**Residents(clients)** - people living in different estates, apartments, or living in gated communities who need
 home services done quickly, reliably and by someone they can trust.They are busy, they value their time
 and they want the job done right.
 
