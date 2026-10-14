@@ -340,3 +340,97 @@ export async function declineBooking(
 
   return updatedBooking;
 }
+
+
+
+/**
+ * Cancel a booking by its resident or assigned provider.
+ *
+ * Allowed transitions:
+ * PENDING   -> CANCELLED
+ * CONFIRMED -> CANCELLED
+ */
+export async function cancelBooking(
+  userId: string,
+  bookingId: string,
+) {
+  // 1. Find the booking and retrieve the fields needed
+  //    for ownership and state-transition checks.
+  const booking = await prisma.booking.findUnique({
+    where: {
+      id: bookingId,
+    },
+    select: {
+      id: true,
+      residentId: true,
+      providerId: true,
+      status: true,
+    },
+  });
+
+  // 2. Reject requests for bookings that do not exist.
+  if (!booking) {
+    throw new NotFoundError('Booking not found');
+  }
+
+  // 3. Verify that the authenticated user participates
+  //    in this booking.
+  const isResident = booking.residentId === userId;
+  const isProvider = booking.providerId === userId;
+
+  if (!isResident && !isProvider) {
+    throw new ForbiddenError(
+      'You are not allowed to cancel this booking',
+    );
+  }
+
+  // 4. Only PENDING and CONFIRMED bookings can be cancelled.
+  if (
+    booking.status !== 'PENDING' &&
+    booking.status !== 'CONFIRMED'
+  ) {
+    throw new ConflictError(
+      'Only pending or confirmed bookings can be cancelled',
+    );
+  }
+
+  // 5. Perform a conditional update.
+  //    The booking must still belong to the authenticated
+  //    participant and remain in an eligible state.
+  const result = await prisma.booking.updateMany({
+    where: {
+      id: bookingId,
+      OR: [
+        { residentId: userId },
+        { providerId: userId },
+      ],
+      status: {
+        in: ['PENDING', 'CONFIRMED'],
+      },
+    },
+    data: {
+      status: 'CANCELLED',
+    },
+  });
+
+  // 6. If no row was updated, the booking may have changed
+  //    state between our initial read and the update.
+  if (result.count === 0) {
+    throw new ConflictError(
+      'Booking can no longer be cancelled',
+    );
+  }
+
+  // 7. Retrieve and return the updated booking.
+  const updatedBooking = await prisma.booking.findUnique({
+    where: {
+      id: bookingId,
+    },
+  });
+
+  if (!updatedBooking) {
+    throw new NotFoundError('Booking not found');
+  }
+
+  return updatedBooking;
+}
