@@ -40,7 +40,12 @@ const bookingPayload = {
 async function createBookingFixture(
     residentId: string,
     providerUserId: string,
-    status: 'PENDING' | 'CONFIRMED' = 'PENDING',
+    status:
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED' = 'PENDING',
   ) {
     return prisma.booking.create({
       data: {
@@ -515,6 +520,8 @@ describe('GET /api/v1/bookings', () => {
 
 
 
+
+
 describe('GET /api/v1/bookings/:id', () => {
   it('allows a resident to view their own booking', async () => {
       const response = await request(app)
@@ -875,5 +882,205 @@ describe('PATCH /api/v1/bookings/:id/decline', () => {
   });
 });
 
+
+//cancellation tests
+describe('PATCH /api/v1/bookings/:id/cancel', () => {
+    it('allows a resident to cancel their own pending booking', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'PENDING',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${residentToken}`);
+  
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.id).toBe(booking.id);
+      expect(response.body.data.status).toBe('CANCELLED');
+  
+      const persistedBooking = await prisma.booking.findUnique({
+        where: { id: booking.id },
+      });
+  
+      expect(persistedBooking?.status).toBe('CANCELLED');
+    });
+  
+    it('allows a resident to cancel their own confirmed booking', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'CONFIRMED',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${residentToken}`);
+  
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.status).toBe('CANCELLED');
+    });
+  
+    it('allows the assigned provider to cancel a pending booking', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'PENDING',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${providerToken}`);
+  
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.status).toBe('CANCELLED');
+    });
+  
+    it('allows the assigned provider to cancel a confirmed booking', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'CONFIRMED',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${providerToken}`);
+  
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.status).toBe('CANCELLED');
+    });
+  
+    it('returns 401 when authentication is missing', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'PENDING',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/cancel`);
+  
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+    });
+  
+    it('returns 403 when another resident attempts cancellation', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'PENDING',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${residentTwoToken}`);
+  
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+  
+      const unchangedBooking = await prisma.booking.findUnique({
+        where: { id: booking.id },
+      });
+  
+      expect(unchangedBooking?.status).toBe('PENDING');
+    });
+  
+    it('returns 403 when an unrelated provider attempts cancellation', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'PENDING',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${providerTwoToken}`);
+  
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+  
+      const unchangedBooking = await prisma.booking.findUnique({
+        where: { id: booking.id },
+      });
+  
+      expect(unchangedBooking?.status).toBe('PENDING');
+    });
+  
+    it('returns 404 when the booking does not exist', async () => {
+      const response = await request(app)
+        .patch(
+          '/api/v1/bookings/00000000-0000-0000-0000-000000000000/cancel',
+        )
+        .set('Authorization', `Bearer ${residentToken}`);
+  
+      expect(response.status).toBe(404);
+      expect(response.body.success).toBe(false);
+    });
+  
+    it('returns 400 when the booking ID is not a valid UUID', async () => {
+      const response = await request(app)
+        .patch('/api/v1/bookings/not-a-valid-uuid/cancel')
+        .set('Authorization', `Bearer ${residentToken}`);
+  
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+    });
+  
+    it('returns 409 when cancelling a booking that is in progress', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'IN_PROGRESS',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${residentToken}`);
+  
+      expect(response.status).toBe(409);
+      expect(response.body.success).toBe(false);
+    });
+  
+    it('returns 409 when cancelling a completed booking', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'COMPLETED',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${residentToken}`);
+  
+      expect(response.status).toBe(409);
+      expect(response.body.success).toBe(false);
+    });
+  
+    it('returns 409 when cancelling an already cancelled booking', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'CANCELLED',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${residentToken}`);
+  
+      expect(response.status).toBe(409);
+      expect(response.body.success).toBe(false);
+    });
+  });
+  
 });
+
+
+
+
 

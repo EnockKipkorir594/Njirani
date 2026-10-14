@@ -7,8 +7,14 @@ import {
   bookingIdSchema,
 } from './bookings.schema.js';
 
-import { createBooking, listBookings,
-  getBookingById, acceptBooking, declineBooking} from './bookings.service.js';
+import {
+  createBooking,
+  listBookings,
+  getBookingById,
+  acceptBooking,
+  declineBooking,
+  cancelBooking,
+} from './bookings.service.js';
 
 import { successResponse } from '../../utils/response.js';
 
@@ -156,4 +162,34 @@ export async function declineBookingHandler(
   } catch (error) {
     next(error);
   }
+}
+
+export async function cancelBookingHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try{
+    if (!req.user){
+      return next(new UnauthorizedError('Authentication required'));
+    }
+
+    const bookingId = bookingIdSchema.parse(req.params.id);
+
+    const booking = await cancelBooking(
+      req.user.userId,
+      bookingId,
+    );
+    return res.status(200).json(
+      successResponse(
+        booking,
+        'Booking cancelled successfully'
+      ),
+    );
+    
+  } catch (error) {
+
+    return next(error);
+  }
+
 }
