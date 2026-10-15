@@ -1077,6 +1077,145 @@ describe('PATCH /api/v1/bookings/:id/cancel', () => {
       expect(response.body.success).toBe(false);
     });
   });
+
+  //start booking tests
+  describe('PATCH /api/v1/bookings/:id/start', () => {
+    it('allows the assigned provider to start a confirmed booking', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'CONFIRMED',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/start`)
+        .set('Authorization', `Bearer ${providerToken}`);
+  
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.status).toBe('IN_PROGRESS');
+  
+      const persistedBooking = await prisma.booking.findUnique({
+        where: { id: booking.id },
+      });
+  
+      expect(persistedBooking?.status).toBe('IN_PROGRESS');
+    });
+  
+    it('rejects starting a pending booking', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'PENDING',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/start`)
+        .set('Authorization', `Bearer ${providerToken}`);
+  
+      expect(response.status).toBe(409);
+      expect(response.body.success).toBe(false);
+    });
+  
+    it('rejects a provider who is not assigned to the booking', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'CONFIRMED',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/start`)
+        .set('Authorization', `Bearer ${providerTwoToken}`);
+  
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+    });
+  
+    it('requires authentication', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'CONFIRMED',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/start`);
+  
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+    });
+  });
+
+//complete booking tests
+  
+  describe('PATCH /api/v1/bookings/:id/complete', () => {
+    it('allows the assigned provider to complete an in-progress booking', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'IN_PROGRESS',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/complete`)
+        .set('Authorization', `Bearer ${providerToken}`);
+  
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.status).toBe('COMPLETED');
+  
+      const persistedBooking = await prisma.booking.findUnique({
+        where: { id: booking.id },
+      });
+  
+      expect(persistedBooking?.status).toBe('COMPLETED');
+    });
+  
+    it('rejects completing a booking that has not started', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'CONFIRMED',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/complete`)
+        .set('Authorization', `Bearer ${providerToken}`);
+  
+      expect(response.status).toBe(409);
+      expect(response.body.success).toBe(false);
+    });
+  
+    it('rejects a provider who is not assigned to the booking', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'IN_PROGRESS',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/complete`)
+        .set('Authorization', `Bearer ${providerTwoToken}`);
+  
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+    });
+  
+    it('requires authentication', async () => {
+      const booking = await createBookingFixture(
+        residentId,
+        providerUserId,
+        'IN_PROGRESS',
+      );
+  
+      const response = await request(app)
+        .patch(`/api/v1/bookings/${booking.id}/complete`);
+  
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+    });
+  });
   
 });
 

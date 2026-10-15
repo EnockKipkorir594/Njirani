@@ -434,3 +434,89 @@ export async function cancelBooking(
 
   return updatedBooking;
 }
+
+//state transition functions for provider bookings 
+
+async function transitionProviderBookingStatus(
+  userId: string,
+  bookingId: string,
+  fromStatus: 'CONFIRMED' | 'IN_PROGRESS',
+  toStatus: 'IN_PROGRESS' | 'COMPLETED',
+) {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: {
+      id: true,
+      providerId: true,
+      status: true,
+    },
+  });
+
+  if (!booking) {
+    throw new NotFoundError('Booking not found');
+  }
+
+  if (booking.providerId !== userId) {
+    throw new ForbiddenError(
+      'You are not allowed to update this booking',
+    );
+  }
+
+  if (booking.status !== fromStatus) {
+    throw new ConflictError(
+      `Booking must be ${fromStatus} before it can transition to ${toStatus}`,
+    );
+  }
+
+  // Only update if the booking is still in the expected state.
+  const result = await prisma.booking.updateMany({
+    where: {
+      id: bookingId,
+      providerId: userId,
+      status: fromStatus,
+    },
+    data: {
+      status: toStatus,
+    },
+  });
+
+  if (result.count === 0) {
+    throw new ConflictError(
+      'Booking status changed before the update could be completed',
+    );
+  }
+
+  const updatedBooking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+  });
+
+  if (!updatedBooking) {
+    throw new NotFoundError('Booking not found');
+  }
+
+  return updatedBooking;
+}
+
+export async function startBooking(
+  userId: string,
+  bookingId: string,
+) {
+  return transitionProviderBookingStatus(
+    userId,
+    bookingId,
+    'CONFIRMED',
+    'IN_PROGRESS',
+  );
+}
+
+export async function completeBooking(
+  userId: string,
+  bookingId: string,
+) {
+  return transitionProviderBookingStatus(
+    userId,
+    bookingId,
+    'IN_PROGRESS',
+    'COMPLETED',
+  );
+}
