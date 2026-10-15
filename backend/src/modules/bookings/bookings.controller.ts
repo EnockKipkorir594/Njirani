@@ -14,6 +14,8 @@ import {
   acceptBooking,
   declineBooking,
   cancelBooking,
+  startBooking,
+  completeBooking,
 } from './bookings.service.js';
 
 import { successResponse } from '../../utils/response.js';
@@ -192,4 +194,58 @@ export async function cancelBookingHandler(
     return next(error);
   }
 
+}
+
+export async function startBookingHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    if (!req.user) {
+      return next(
+        new UnauthorizedError('Authentication required'),
+      );
+    }
+
+    const bookingId = bookingIdSchema.parse(req.params.id);
+
+    const booking = await startBooking(
+      req.user.userId,
+      bookingId,
+    );
+
+    return res.status(200).json(
+      successResponse(booking, 'Booking started successfully'),
+    );
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function completeBookingHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    if (!req.user) {
+      return next(
+        new UnauthorizedError('Authentication required'),
+      );
+    }
+
+    const bookingId = bookingIdSchema.parse(req.params.id);
+
+    const booking = await completeBooking(
+      req.user.userId,
+      bookingId,
+    );
+
+    return res.status(200).json(
+      successResponse(booking, 'Booking completed successfully'),
+    );
+  } catch (error) {
+    return next(error);
+  }
 }

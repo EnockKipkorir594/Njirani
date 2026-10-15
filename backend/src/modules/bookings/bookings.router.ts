@@ -6,6 +6,8 @@ import {
     acceptBookingHandler,
     declineBookingHandler,
     cancelBookingHandler,
+    startBookingHandler,
+    completeBookingHandler,
   } from './bookings.controller.js';
 import { authenticate, requireRole } from '../../middleware/auth.middleware.js';
 import { UserRole } from '../../generated/prisma/index.js';
@@ -43,6 +45,21 @@ bookingRouter.patch(
     requireRole([UserRole.RESIDENT, UserRole.PROVIDER]),
     cancelBookingHandler,
   );
+
+
+bookingRouter.patch(
+  '/:id/start',
+  authenticate,
+  requireRole([UserRole.PROVIDER]),
+  startBookingHandler,
+);
+  
+bookingRouter.patch(
+  '/:id/complete',
+  authenticate,
+  requireRole([UserRole.PROVIDER]),
+  completeBookingHandler,
+);
 
 bookingRouter.get('/:id', authenticate, getBookingByIdHandler);
 
