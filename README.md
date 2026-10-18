@@ -16,7 +16,7 @@ word of mouth in a group chat and hope.
 Njirani replaces that chaos with a platform that is fast, transparent, and trustworthy.
 
 ## How it works.
-A resident opens Njirani,posts a job - "I need a plumber.Ruaka Estate.blocked drainage." - 
+A resident opens Njirani,posts a job - "I need a plumber.Ruaka Estate.blocked drainage and leaking sink need urgent help." - 
 and within minutes,available service providers in that area see the request and place a bid.
 The resident reviews the bids,picks the provider whose price and rating they trust, the job 
 is confirmed.
