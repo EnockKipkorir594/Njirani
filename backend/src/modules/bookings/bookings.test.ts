@@ -1,8 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import request from 'supertest'
 import { createTestApp } from '../../tests/helpers/app.js'
 import prisma from '../../config/database.js'
 import { signAccessToken } from '../../utils/jwt.js'
+
+vi.mock('../notifications/notifications.service.js', () => ({
+  enqueueBookingNotification: vi.fn().mockResolvedValue(true),
+}));
 
 
 const app = createTestApp()

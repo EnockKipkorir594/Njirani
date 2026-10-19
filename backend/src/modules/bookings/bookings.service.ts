@@ -2,6 +2,8 @@ import { CreateBookingInput, ListBookingsQueryInput } from './bookings.schema.js
 import prisma from '../../config/database.js';
 import { NotFoundError, ForbiddenError, ConflictError } from '../../utils/errors.js';
 import { Prisma } from '../../generated/prisma/index.js';
+import { enqueueBookingNotification } from
+  '../notifications/notifications.service.js';
 
 
 export async function createBooking(
@@ -64,6 +66,12 @@ export async function createBooking(
         paymentStatus: 'PENDING',
         priceQuote: null,
       },
+    });
+
+    await enqueueBookingNotification({
+      event: 'BOOKING_CREATED',
+      bookingId: createdBooking.id,
+      actorUserId: residentId,
     });
   
     return createdBooking;
@@ -279,6 +287,12 @@ export async function acceptBooking(
     },
   });
 
+  await enqueueBookingNotification({
+    event: 'BOOKING_ACCEPTED',
+    bookingId,
+    actorUserId: userId,
+  });
+
   return updatedBooking;
 }
 
@@ -336,6 +350,12 @@ export async function declineBooking(
     where: {
       id: bookingId,
     },
+  });
+
+  await enqueueBookingNotification({
+    event: 'BOOKING_DECLINED',
+    bookingId,
+    actorUserId: userId,
   });
 
   return updatedBooking;
@@ -431,6 +451,12 @@ export async function cancelBooking(
   if (!updatedBooking) {
     throw new NotFoundError('Booking not found');
   }
+
+  await enqueueBookingNotification({
+    event: 'BOOKING_CANCELLED',
+    bookingId,
+    actorUserId: userId,
+  });
 
   return updatedBooking;
 }

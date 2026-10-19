@@ -10,6 +10,9 @@
     "dev": "nodemon --exec tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "worker:dev": "tsx src/jobs/notification.processor.ts",
+    "worker": "node dist/jobs/notification.processor.js",
+    "email:smoke": "tsx src/scripts/email.smoke-test.ts",
     "db:seed": "tsx prisma/seed.ts",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -48,6 +51,7 @@
     "express-rate-limit": "^8.7.0",
     "fast-uri": "^3.1.7",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.1.2",
     "pg": "^8.22.0",
     "prisma": "^7.9.1",
     "zod": "^4.4.3"
