@@ -27,3 +27,12 @@ export function createWorkerRedisConnection(): IORedis {
 
     return logRedisErrors(connection, 'worker');
 }
+
+export function createCacheRedisConnection(): IORedis {
+    const connection = new IORedis(env.REDIS_URL, {
+        maxRetriesPerRequest: 1,
+        connectTimeout: 1000,
+    });
+
+    return logRedisErrors(connection, 'cache');
+}

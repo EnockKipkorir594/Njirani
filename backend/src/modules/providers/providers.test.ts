@@ -3,6 +3,7 @@ import request from 'supertest'
 import { createTestApp } from '../../tests/helpers/app.js'
 import prisma from '../../config/database.js'
 import { signAccessToken } from '../../utils/jwt.js'
+import { closeProviderSearchCacheConnection, invalidateProviderSearchCache } from './providers.cache.js'
 
 
 const app = createTestApp()
@@ -24,6 +25,11 @@ const providerPayload = {
     availability:  { monday: ['09:00-17:00'], tuesday: ['09:00-17:00'] }
 
 }
+
+beforeEach(async () => {
+    await invalidateProviderSearchCache();
+});
+
 
 beforeAll( async () => {
     await prisma.providerProfile.deleteMany()
@@ -80,6 +86,7 @@ afterAll( async () => {
     await prisma.providerProfile.deleteMany()
     await prisma.user.deleteMany()
     await prisma.serviceCategory.deleteMany()
+    await closeProviderSearchCacheConnection();
     await prisma.$disconnect()
 
 })
