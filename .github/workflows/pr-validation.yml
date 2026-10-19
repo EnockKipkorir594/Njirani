@@ -93,7 +93,17 @@ jobs:
 
         ports:
           - 5432:5432
-      
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -119,6 +129,7 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: postgresql://njirani:njirani_dev_pass@localhost:5432/njirani_test
+          REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-jwt-secret-key-for-testing-only-12345
           JWT_REFRESH_SECRET: test-jwt-refresh-secret-key-for-testing-only-67890
           JWT_EXPIRES_IN: 1h
