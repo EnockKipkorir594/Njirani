@@ -28,8 +28,34 @@ const envSchema = z.object({
 
     REDIS_URL: z
         .string()
-        .startsWith('redis://', 'REDIS_URL must start with redis://')
-        .optional(),
+        .url('REDIS_URL must be a valid URL')
+        .refine((url) => url.startsWith('redis://'), {
+            message: 'REDIS_URL must start with redis://',
+        })
+        .default('redis://localhost:6379'),
+
+    SMTP_HOST: z.string().min(1).default('localhost'),
+
+    SMTP_PORT: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(65535)
+        .default(1025),
+    
+    SMTP_SECURE: z
+        .enum(['true', 'false'])
+        .default('false')
+        .transform((value) => value === 'true'),
+    
+    SMTP_FROM: z
+        .string()
+        .email('SMTP_FROM must be a valid email address')
+        .default('notifications@njirani.local'),
+    
+    SMTP_USER: z.string().min(1).optional(),
+    
+    SMTP_PASSWORD: z.string().min(1).optional(),
 
     FRONTEND_URL : z 
         .string()
