@@ -27,3 +27,18 @@ export function createWorkerRedisConnection(): IORedis {
 
     return logRedisErrors(connection, 'worker');
 }
+
+export function createCacheRedisConnection(): IORedis {
+    const connection = new IORedis(env.REDIS_URL, {
+        maxRetriesPerRequest: 1,
+        connectTimeout: 1000,
+        // Without a command timeout, every command issued while the
+        // client is reconnecting waits for the next successful
+        // connection attempt. The rejection latency then grows with
+        // every consecutive failure, so a Redis outage turns into an
+        // unbounded hang instead of a fast, graceful fallback.
+        commandTimeout: 1000,
+    });
+
+    return logRedisErrors(connection, 'cache');
+}

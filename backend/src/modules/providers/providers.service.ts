@@ -7,6 +7,12 @@ import {
     type NearbyProvider,
 } from "../geospatial/geospatial.service.js";
 
+import {
+    getCachedProviderSearch,
+    setCachedProviderSearch,
+    invalidateProviderSearchCache,
+    type ProviderSearchCacheFilters,
+} from './providers.cache.js';
 
 export async function createProviderProfile(
     userId : string, 
@@ -81,6 +87,9 @@ export async function createProviderProfile(
             },
         },
     });
+
+
+    await invalidateProviderSearchCache();
 
     return createdProfile;
 
@@ -181,11 +190,13 @@ export async function updateProviderProfile(
         },
     });
 
+    await invalidateProviderSearchCache();
+
     return updatedProfile;
 }
 
 
-export async function listProviderProfiles(filters: {
+type ProviderSearchFilters = {
     categoryId?: string;
     categorySlug?: string;
     search?: string;
@@ -195,7 +206,11 @@ export async function listProviderProfiles(filters: {
     lat?: number;
     lng?: number;
     radiusKm?: number;
-}) {
+};
+
+async function queryProviderProfiles(
+    filters: ProviderSearchFilters,
+) {
     const page = Math.max(1, filters.page ?? 1);
     const limit = Math.min(50, Math.max(1, filters.limit ?? 20));
     const skip = (page - 1) * limit;
@@ -266,8 +281,6 @@ export async function listProviderProfiles(filters: {
             select: {
                 id: true,
                 name: true,
-                email: true,
-                phone: true,
             },
         },
         category: {
@@ -391,4 +404,84 @@ export async function listProviderProfiles(filters: {
             totalPages: Math.ceil(total / limit),
         },
     };
+}
+
+type ProviderSearchResult = Awaited<
+    ReturnType<typeof queryProviderProfiles>
+>;
+
+function restoreCachedProfileDates(
+    result: ProviderSearchResult,
+): ProviderSearchResult {
+    return {
+        ...result,
+        profiles: result.profiles.map((profile) => {
+            const serialized = profile as unknown as Record<
+                string,
+                unknown
+            >;
+
+            const reviveDate = (value: unknown): Date | undefined => {
+                if (value instanceof Date) {
+                    return value;
+                }
+
+                if (typeof value === 'string' || typeof value === 'number') {
+                    const date = new Date(value);
+
+                    if (!Number.isNaN(date.getTime())) {
+                        return date;
+                    }
+                }
+
+                return undefined;
+            };
+
+            const createdAt = reviveDate(serialized.createdAt);
+            const updatedAt = reviveDate(serialized.updatedAt);
+
+            return {
+                ...profile,
+                ...(createdAt ? { createdAt } : {}),
+                ...(updatedAt ? { updatedAt } : {}),
+            };
+        }),
+    };
+}
+
+export async function listProviderProfiles(
+    filters: ProviderSearchFilters,
+) {
+    const normalizedFilters: ProviderSearchCacheFilters = {
+        categoryId: filters.categoryId ?? null,
+        categorySlug: filters.categorySlug ?? null,
+        search: filters.search ?? null,
+        page: Math.max(1, filters.page ?? 1),
+        limit: Math.min(50, Math.max(1, filters.limit ?? 20)),
+        sortBy: filters.sortBy ?? 'newest',
+        lat: filters.lat ?? null,
+        lng: filters.lng ?? null,
+        radiusKm:
+            filters.lat !== undefined && filters.lng !== undefined
+                ? filters.radiusKm ?? 5
+                : null,
+    };
+
+    const cached = await getCachedProviderSearch<ProviderSearchResult>(
+        normalizedFilters,
+    );
+
+    if (cached.hit && cached.value !== undefined) {
+        return restoreCachedProfileDates(cached.value);
+    }
+
+    const result = await queryProviderProfiles(filters);
+
+    await setCachedProviderSearch(
+        normalizedFilters,
+        cached.generation,
+        result,
+    );
+
+    return result;
 }
