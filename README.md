@@ -13,7 +13,7 @@ of knowing if the person showing up at their is reliable or not.
 There is no system, no accountability.No record of who did good work and who didn't.Just a 
 word of mouth in a group chat and hope.
 
-Njirani replaces that chaos with a platform that is fast, transparent, and trustworthy.
+Njirani replaces that chaos with a platform that is fast, transparent, and trustworthy for residents and service providers.
 
 ## How it works.
 A resident opens Njirani,posts a job - "I need a plumber.Ruaka Estate.blocked drainage and leaking sink need urgent help." - 
