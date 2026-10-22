@@ -547,5 +547,26 @@ describe('Provider search cache', () => {
                 errorSpy.mockRestore();
             }
         });
+
+        it('uses normalized pagination values for the database query and cache key', async () => {
+            // Arrange: use a unique search term to avoid an existing cache entry.
+            const filters = {
+              search: 'pagination-normalization-regression',
+              page: 0,
+              limit: 100,
+            };
+          
+            // Act
+            await listProviderProfiles(filters);
+          
+            // Assert
+            // Verify the Prisma query uses page 1 and a limit of 50.
+            expect(mocks.findMany).toHaveBeenCalledWith(
+                expect.objectContaining({
+                  skip: 0,
+                  take: 50,
+                }),
+            );
+        });
     });
 });

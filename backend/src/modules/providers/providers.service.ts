@@ -475,13 +475,27 @@ export async function listProviderProfiles(
         return restoreCachedProfileDates(cached.value);
     }
 
-    const result = await queryProviderProfiles(filters);
+  
+    const queryFilters: ProviderSearchFilters = {
+        ...filters,
+        page: normalizedFilters.page,
+        limit: normalizedFilters.limit,
+        sortBy: normalizedFilters.sortBy,
+        radiusKm:
+        normalizedFilters.lat !== null &&
+        normalizedFilters.lng !== null
+            ? normalizedFilters.radiusKm ?? 5
+            : undefined,
+    };
+  
+    const result = await queryProviderProfiles(queryFilters);
 
     await setCachedProviderSearch(
-        normalizedFilters,
-        cached.generation,
-        result,
+    normalizedFilters,
+    cached.generation,
+    result,
     );
 
     return result;
+  
 }

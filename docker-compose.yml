@@ -54,10 +54,6 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       PORT: 3000
       NODE_ENV: development
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-      - /app/src/generated/prisma
     depends_on:
       postgres:
         condition: service_healthy
