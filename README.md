@@ -8,7 +8,7 @@ Right now when a pipe bursts at 9am or a light fitting stops working most kenyan
 same thing - they open a whatsapp group and type "Does anyone know a good plumber?."
 Then they wait sometimes they get five recommendations, sometimes they get none.
 They call numbers that don't that don't pickup, negotiate prices blindly,and have no way 
-of knowing if the person showing up at their is reliable or not. 
+of knowing if the person showing up at their is reliable or trusted or not.
 
 There is no system, no accountability.No record of who did good work and who didn't.Just a 
 word of mouth in a group chat and hope.
