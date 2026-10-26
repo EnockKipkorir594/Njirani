@@ -1,16 +1,52 @@
+
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Inter,
+  JetBrains_Mono,
+  Plus_Jakarta_Sans,
+} from "next/font/google";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
+  variable: "--font-jakarta-family",
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-inter-family",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-family",
+  display: "swap",
+  weight: ["400", "500"],
+});
+
+const themeInitializationScript = `
+(function () {
+  var storageKey = "njirani-theme";
+  var root = document.documentElement;
+
+  try {
+    var savedTheme = window.localStorage.getItem(storageKey);
+
+    if (savedTheme === "light" || savedTheme === "dark") {
+      root.setAttribute("data-theme", savedTheme);
+    } else {
+      root.removeAttribute("data-theme");
+    }
+  } catch {
+    root.removeAttribute("data-theme");
+  }
+})();
+`;
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -25,9 +61,23 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+      className={`${jakarta.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: themeInitializationScript }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col font-sans">
+        <header className="flex items-center justify-end border-b border-surface-border px-4 py-3 md:px-8">
+          <ThemeToggle />
+        </header>
+
+        {children}
+      </body>
     </html>
   );
 }
+
+

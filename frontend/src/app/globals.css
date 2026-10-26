@@ -1,26 +1,155 @@
+
 @import "tailwindcss";
 
+/*
+ * Njirani Design Foundation
+ * Source of truth: approved design specifications.
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  /* Primary — Savanna Green */
+  --primary-50: #f0faf4;
+  --primary-100: #dcf5e7;
+  --primary-200: #bbeacf;
+  --primary-300: #88d9ab;
+  --primary-400: #50c07f;
+  --primary-500: #2da35f;
+  --primary-600: #1f8a4a;
+  --primary-700: #1a6f3c;
+  --primary-800: #175830;
+  --primary-900: #134828;
+
+  /* Accent — Warm Amber */
+  --accent-400: #fbbf24;
+  --accent-500: #f59e0b;
+  --accent-600: #d97706;
+
+  /* Neutrals — Warm Stone */
+  --neutral-50: #fafaf9;
+  --neutral-100: #f5f5f4;
+  --neutral-200: #e7e5e4;
+  --neutral-300: #d6d3d1;
+  --neutral-400: #a8a29e;
+  --neutral-500: #78716c;
+  --neutral-600: #57534e;
+  --neutral-700: #44403c;
+  --neutral-800: #292524;
+  --neutral-900: #1c1917;
+
+  /* Semantic colors — approved values */
+  --semantic-success: #2da35f;
+  --semantic-warning: #f59e0b;
+  --semantic-error: #dc2626;
+  --semantic-info: #2563eb;
+
+  /* Light-mode surfaces */
+  --surface-page: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-border: var(--neutral-200);
+  --surface-text: var(--neutral-900);
+  --surface-text-muted: var(--neutral-500);
+
+  /* Dark-mode surface values — approved values */
+  --surface-dark: #1c1917;
+  --surface-dark-raised: #292524;
+  --surface-dark-border: #44403c;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/*
+ * Explicit dark selection.
+ * System-preference handling is also supported below.
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-page: var(--surface-dark);
+  --surface-raised: var(--surface-dark-raised);
+  --surface-border: var(--surface-dark-border);
+  --surface-text: var(--neutral-50);
+  --surface-text-muted: var(--neutral-300);
 }
 
+/*
+ * Follow the operating system until a theme is explicitly selected.
+ * data-theme="light" overrides this rule.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --surface-page: var(--surface-dark);
+    --surface-raised: var(--surface-dark-raised);
+    --surface-border: var(--surface-dark-border);
+    --surface-text: var(--neutral-50);
+    --surface-text-muted: var(--neutral-300);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/*
+ * Tailwind CSS 4 theme mappings.
+ * Brand utilities use the approved values above.
+ */
+@theme inline {
+  /* Primary brand */
+  --color-brand-50: var(--primary-50);
+  --color-brand-100: var(--primary-100);
+  --color-brand-200: var(--primary-200);
+  --color-brand-300: var(--primary-300);
+  --color-brand-400: var(--primary-400);
+  --color-brand-500: var(--primary-500);
+  --color-brand-600: var(--primary-600);
+  --color-brand-700: var(--primary-700);
+  --color-brand-800: var(--primary-800);
+  --color-brand-900: var(--primary-900);
+
+  /* Accent */
+  --color-accent-400: var(--accent-400);
+  --color-accent-500: var(--accent-500);
+  --color-accent-600: var(--accent-600);
+
+  /* Warm stone */
+  --color-stone-50: var(--neutral-50);
+  --color-stone-100: var(--neutral-100);
+  --color-stone-200: var(--neutral-200);
+  --color-stone-300: var(--neutral-300);
+  --color-stone-400: var(--neutral-400);
+  --color-stone-500: var(--neutral-500);
+  --color-stone-600: var(--neutral-600);
+  --color-stone-700: var(--neutral-700);
+  --color-stone-800: var(--neutral-800);
+  --color-stone-900: var(--neutral-900);
+
+  /* Semantic utilities */
+  --color-success: var(--semantic-success);
+  --color-warning: var(--semantic-warning);
+  --color-error: var(--semantic-error);
+  --color-info: var(--semantic-info);
+
+  /* Surface utilities */
+  --color-background: var(--surface-page);
+  --color-foreground: var(--surface-text);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-border: var(--surface-border);
+  --color-surface-muted-text: var(--surface-text-muted);
+
+  /* Approved font-family mappings */
+  --font-sans: var(--font-inter-family);
+  --font-heading: var(--font-jakarta-family);
+  --font-inter: var(--font-inter-family);
+  --font-mono: var(--font-jetbrains-family);
 }
+
+/* Global document defaults */
+html {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100%;
+  background-color: var(--surface-page);
+  color: var(--surface-text);
+  font-family: var(--font-inter-family), sans-serif;
+}
+

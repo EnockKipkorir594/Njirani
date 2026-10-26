@@ -1,7 +1,26 @@
+
+import path from "node:path";
 import type { NextConfig } from "next";
 
+const backendUrl = (
+  process.env.NJIRANI_API_URL ?? "http://localhost:3000"
+).replace(/\/+$/, "");
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
+
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendUrl}/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
+
+
