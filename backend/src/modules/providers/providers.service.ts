@@ -499,3 +499,18 @@ export async function listProviderProfiles(
     return result;
   
 }
+
+
+export async function listServiceCategories() {
+    return prisma.serviceCategory.findMany({
+        select: {
+            id: true,
+            name: true,
+            slug: true,
+            icon: true,
+        },
+        orderBy: {
+            name: 'asc',
+        },
+    });
+}

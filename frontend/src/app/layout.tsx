@@ -1,16 +1,51 @@
+
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Navbar } from "@/components/ui/Navbar";
+import {
+  Plus_Jakarta_Sans,
+  Inter,
+  JetBrains_Mono,
+} from "next/font/google";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+
+const headingFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
+  display: "swap",
+  variable: "--font-plus-jakarta",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const bodyFont = Inter({
   subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter-family",
 });
+
+const monoFont = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-jetbrains-mono",
+});
+
+
+const themeInitializationScript = `
+(function () {
+  var storageKey = "njirani-theme";
+  var root = document.documentElement;
+
+  try {
+    var savedTheme = window.localStorage.getItem(storageKey);
+
+    if (savedTheme === "light" || savedTheme === "dark") {
+      root.setAttribute("data-theme", savedTheme);
+    } else {
+      root.removeAttribute("data-theme");
+    }
+  } catch {
+    root.removeAttribute("data-theme");
+  }
+})();
+`;
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -25,9 +60,21 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+      className={`h-full antialiased ${headingFont.variable} ${bodyFont.variable} ${monoFont.variable}`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: themeInitializationScript }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col font-sans">
+        <Navbar />
+
+        {children}
+      </body>
     </html>
   );
 }
+
+
