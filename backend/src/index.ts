@@ -59,7 +59,7 @@ app.use('/auth', authRouter);
 app.use('/estates', estateRouter);
 
 //provider profile endpoints 
-app.use('/providers', providerRouter)
+app.use('/api/providers', providerRouter)
 
 //booking endpoints 
 app.use('/api/v1/bookings', bookingRouter)
@@ -101,3 +101,5 @@ const PORT = env.PORT;
 app.listen(PORT, () =>{
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
 })
+
+

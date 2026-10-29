@@ -1,4 +1,4 @@
-import { createProviderProfile, updateProviderProfile, listProviderProfiles} from "./providers.service.js"
+import { createProviderProfile, updateProviderProfile, listProviderProfiles,listServiceCategories} from "./providers.service.js"
 import {  providerSchema, listProvidersQuerySchema, updateProviderSchema } from "./providers.schema.js"
 import { Request, Response, NextFunction } from "express"
 import { successResponse } from "../../utils/response.js";
@@ -101,3 +101,23 @@ export async function createProviderHandler(
       next(error);
     }
   }
+
+
+  export async function listServiceCategoriesHandler(
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+) {
+    try {
+        const categories = await listServiceCategories();
+
+        return res.status(200).json(
+            successResponse(
+                categories,
+                'Service categories retrieved successfully',
+            ),
+        );
+    } catch (error) {
+        return next(error);
+    }
+}

@@ -136,9 +136,9 @@
 
   /* Approved font-family mappings */
   --font-sans: var(--font-inter-family);
-  --font-heading: var(--font-jakarta-family);
+  --font-heading: var(--font-plus-jakarta);
   --font-inter: var(--font-inter-family);
-  --font-mono: var(--font-jetbrains-family);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 /* Global document defaults */

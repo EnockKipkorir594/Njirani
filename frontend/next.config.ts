@@ -7,6 +7,8 @@ const backendUrl = (
 ).replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
+
+  allowedDevOrigins: ["192.168.1.9"],
   turbopack: {
     root: path.resolve(__dirname),
   },

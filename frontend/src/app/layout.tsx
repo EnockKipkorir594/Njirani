@@ -1,33 +1,32 @@
 
 import type { Metadata } from "next";
+import "./globals.css";
+import { Navbar } from "@/components/ui/Navbar";
 import {
+  Plus_Jakarta_Sans,
   Inter,
   JetBrains_Mono,
-  Plus_Jakarta_Sans,
 } from "next/font/google";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({
+
+const headingFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-jakarta-family",
   display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-plus-jakarta",
 });
 
-const inter = Inter({
+const bodyFont = Inter({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-inter-family",
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const monoFont = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-jetbrains-family",
   display: "swap",
-  weight: ["400", "500"],
+  variable: "--font-jetbrains-mono",
 });
+
 
 const themeInitializationScript = `
 (function () {
@@ -62,7 +61,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${jakarta.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`h-full antialiased ${headingFont.variable} ${bodyFont.variable} ${monoFont.variable}`}
     >
       <head>
         <script
@@ -70,9 +69,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col font-sans">
-        <header className="flex items-center justify-end border-b border-surface-border px-4 py-3 md:px-8">
-          <ThemeToggle />
-        </header>
+        <Navbar />
 
         {children}
       </body>
