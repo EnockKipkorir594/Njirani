@@ -4,7 +4,7 @@ gated community with trusted local service providers - plumbers, electricians,cl
 house helps,painters, movers and more - all within their immediate area of residence.
 
 ## The problem it solves 
-Right now when a pipe bursts at 9am or a light fitting stops working most kenyans do the 
+Right now when a pipe bursts or a sink leaks at 9am or a light fitting stops working most kenyans do the 
 same thing - they open a whatsapp group and type "Does anyone know a good plumber?."
 Then they wait sometimes they get five recommendations, sometimes they get none.
 They call numbers that don't that don't pickup, negotiate prices blindly,get overcharged and have no way 
