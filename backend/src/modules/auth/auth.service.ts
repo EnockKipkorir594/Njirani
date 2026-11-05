@@ -105,6 +105,33 @@ export async function loginUser(email: string, password:string){
 
 }
 
+
+// Get the currently authenticated user's account information
+export async function getAuthenticatedUser(userId: string) {
+  const user = await prisma.user.findUnique({
+      where: {
+          id: userId,
+      },
+      select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          estateId: true,
+          createdAt: true,
+          updatedAt: true,
+      },
+  });
+
+  // Reject requests for accounts that no longer exist
+  if (!user) {
+      throw new UnauthorizedError('User account no longer exists');
+  }
+
+  return user;
+}
+
 export async function refreshAccessToken(refreshToken: string){
     //verify the token
     let  decoded: {userId: string , role: UserRole}

@@ -2,10 +2,11 @@ import { RefreshInput, refreshSchema, registerSchema } from "./auth.schema.js";
 import { RegisterInput } from "./auth.schema.js";
 import { Request, Response, NextFunction } from "express";
 import { successResponse } from "../../utils/response.js";
-import { refreshAccessToken, registerUser } from "./auth.service.js";
+import { refreshAccessToken, registerUser, getAuthenticatedUser} from "./auth.service.js";
 import { loginUser } from "./auth.service.js";
 import { LoginInput } from "./auth.schema.js";
 import { LoginSchema } from "./auth.schema.js";
+import { UnauthorizedError } from "../../utils/errors.js";
 
 export  async function registerHandler(
 
@@ -48,6 +49,32 @@ export async function loginHandler(
     }
 
 }
+
+export async function getHandler(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    try{
+        if(!req.user) {
+            throw new UnauthorizedError('Unauthorized access')
+        }
+
+        const user = await getAuthenticatedUser(req.user.userId)
+
+        res.status(200).json(
+            successResponse(
+                {user}, 
+                'Authenticated user retrieved successfully')
+        );
+
+    
+    } catch(error){
+        next(error);
+    }
+}
+
+
 export async function refreshHandler(
     req: Request < unknown, unknown, RefreshInput>,
     res: Response,

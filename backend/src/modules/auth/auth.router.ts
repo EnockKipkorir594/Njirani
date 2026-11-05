@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { loginHandler, refreshHandler, registerHandler } from "./auth.controller.js";
+import { loginHandler, refreshHandler, registerHandler, getHandler } from "./auth.controller.js";
 import { authenticate, requireRole } from "../../middleware/auth.middleware.js";
 import { UserRole } from "../../generated/prisma/index.js";
 import { authLimiter } from '../../middleware/rateLimit.middleware.js';
@@ -16,9 +16,8 @@ authRouter.post('/register', registerHandler)
 authRouter.post('/login', loginHandler)
 
 //authenticated route 
-authRouter.get('/me' , authenticate, (req, res) => {
-    res.json({success: true, user: req.user})
-})
+authRouter.get('/me' , authenticate, getHandler)
+
 //admins route 
 authRouter.get('/admin-only', authenticate, requireRole([UserRole.ADMIN]), (req, res) => {
     res.json({success: true, message: 'You are admin'})

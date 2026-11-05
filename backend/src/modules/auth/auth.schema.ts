@@ -25,10 +25,9 @@ export const registerSchema = z.object ({
         .min(10, 'Phone number must be at least 10 characters')
         .max(15, 'Phone number must be at most 15 characaters'),
 
-    role: z 
-        .enum(['ADMIN','PROVIDER','RESIDENT'], { message: 'Role is required',
-            
-            }),
+    role: z
+        .enum(['PROVIDER', 'RESIDENT'], 
+        { message: 'Role must be either PROVIDER or RESIDENT' }),
 
 })
 
