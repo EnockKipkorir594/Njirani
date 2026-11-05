@@ -83,6 +83,20 @@ describe('POST /api/v1/auth/register', () => {
 
         expect(response.status).toBe(400)
     })
+
+    it('should reject public ADMIN registration', async () => {
+        const response = await request(app)
+          .post('/api/v1/auth/register')
+          .send({
+            name: 'Admin User',
+            email: 'admin@example.com',
+            password: 'Password123!',
+            phone: '0712345678',
+            role: 'ADMIN',
+          })
+      
+        expect(response.status).toBe(400)
+    })
 })
 
 // ── Login tests ───────────────────────────────────────────────────
@@ -150,9 +164,24 @@ describe('GET /api/v1/auth/me', () => {
             .get('/api/v1/auth/me')
             .set('Authorization', `Bearer ${token}`)
 
-        expect(response.status).toBe(200)
-        expect(response.body.success).toBe(true)
-        expect(response.body.user).toBeDefined()
+            expect(response.status).toBe(200);
+
+            expect(response.body.data.user).toMatchObject({
+                id: expect.any(String),
+                name: expect.any(String),
+                email: expect.any(String),
+                phone: expect.any(String),
+                role: expect.any(String),
+            });
+            
+            expect(response.body.data.user).toHaveProperty('estateId');
+            expect(response.body.data.user).toHaveProperty('createdAt');
+            expect(response.body.data.user).toHaveProperty('updatedAt');
+            
+            // Sensitive information must never be exposed
+            expect(response.body.data.user).not.toHaveProperty('passwordHash');
+            expect(response.body.data.user).not.toHaveProperty('accessToken');
+            expect(response.body.data.user).not.toHaveProperty('refreshToken');
     })
 
     it('returns 401 when no token is provided', async () => {
@@ -179,4 +208,47 @@ describe('GET /api/v1/auth/me', () => {
 
         expect(response.status).toBe(401)
     })
+
+    it('returns 401 when the authenticated user no longer exists', async () => {
+        // Register a user
+        const registrationResponse = await request(app)
+            .post('/api/v1/auth/register')
+            .send({
+                name: 'Deleted User',
+                email: 'deleted-user@njirani.co.ke',
+                password: 'SecurePass123!',
+                phone: '0712345678',
+                role: 'RESIDENT',
+            });
+    
+        expect(registrationResponse.status).toBe(201);
+    
+        const userId = registrationResponse.body.data.user.id;
+    
+        // Authenticate the user and obtain an access token
+        const loginResponse = await request(app)
+            .post('/api/v1/auth/login')
+            .send({
+                email: 'deleted-user@njirani.co.ke',
+                password: 'SecurePass123!',
+            });
+    
+        expect(loginResponse.status).toBe(200);
+    
+        const accessToken = loginResponse.body.data.accessToken;
+    
+        // Delete the user's database record
+        await prisma.user.delete({
+            where: {
+                id: userId,
+            },
+        });
+    
+        // Attempt to retrieve the deleted user's account
+        const response = await request(app)
+            .get('/api/v1/auth/me')
+            .set('Authorization', `Bearer ${accessToken}`);
+    
+        expect(response.status).toBe(401);
+    });
 })
