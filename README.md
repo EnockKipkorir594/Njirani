@@ -54,5 +54,5 @@ and handymen.
 and fulfilled within their property, and who want ensure residents are getting quality service from verified providers.
 
 ##Goal of Njirani 
-Njirani helps to connect service providers to residents. Njirani is categorized as the Glovo oo services. 
+Njirani helps to connect service providers to residents. Njirani is categorized as the Glovo of services. 
 
