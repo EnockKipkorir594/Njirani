@@ -44,7 +44,7 @@ the platform.The best providers rise to the top and get more work. The poor ones
 ## Who uses Njirani 
 **Residents(clients)** - people living in different estates, apartments, or living in gated communities who need
 home services done quickly, reliably and by someone they can trust.They are busy, they value their time
-and they want the job done right.
+and they want the job done right and with honesty.
 
 **Service providers(fundis)** - skilled tradespeople and home service workers who want a steady stream of jobs nearby
 without relying on refferals and WhatsApp groups.Plumbers, electricians, cleaners, painters,gardeners, security guards
