@@ -18,7 +18,7 @@ Njirani replaces that chaos with a platform that is fast, transparent, and trust
 ## How it works.
 A resident opens Njirani,posts a job - "I need a plumber.Ruaka Estate.blocked drainage and leaking sink need urgent help." - 
 and within minutes,available service providers in that area see the request and place a bid.
-The resident reviews the bids,picks the provider whose price and rating they trust, the job 
+The resident reviews the bids,picks the provider whose price and rating they know and trust, the job 
 is confirmed.
 
 When the job is done payment goes through M-PESA directly on the platform - no cash handling no 
