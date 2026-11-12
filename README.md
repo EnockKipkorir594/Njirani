@@ -48,7 +48,7 @@ and they want the job done right and with honesty.
 
 **Service providers(fundis)** - skilled tradespeople and home service workers who want a steady stream of jobs nearby
 without relying on refferals and WhatsApp groups.Plumbers, electricians, cleaners, painters,gardeners, security guards
-and handymen.
+and handymen or any other service 
 
 **Estate managers(Admins)** - managers of estates or apartment complexes who want oversight of services being requested
 and fulfilled within their property, and who want ensure residents are getting quality service from verified providers.
