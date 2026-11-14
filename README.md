@@ -39,7 +39,7 @@ the platform.The best providers rise to the top and get more work. The poor ones
 - No more depending on a word of mouth or referrals to find work.
 - A digital profile that show cases their rating and completed jobs.
 - A fair bidding system where skill and reputation win, not connection.
-- GUaranteed payment via M-PESA the moment a job is confirmed complete.
+- Guaranteed payment via M-PESA on the app  the moment a job is confirmed complete.
 
 ## Who uses Njirani 
 **Residents(clients)** - people living in different estates, apartments, or living in gated communities who need
