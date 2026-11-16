@@ -3,12 +3,11 @@ import express, {  Request, Response } from "express";
 import { env } from './config/env.js';
 import prisma from "./config/database.js";
 import authRouter from './modules/auth/auth.router.js'; 
-import { AppError } from './utils/errors.js';
-import { errorResponse } from './utils/response.js';
 import estateRouter from './modules/estates/estates.router.js';
 import providerRouter from './modules/providers/providers.router.js';
 import { generalLimiter } from './middleware/rateLimit.middleware.js';
 import bookingRouter from './modules/bookings/bookings.router.js';
+import { errorHandler } from './middleware/error.middleware.js';
 
 
 
@@ -76,25 +75,8 @@ app.use((_req: Request, res: Response) => {
 });
 
 //global handler 
-app.use((err: Error, _req: Request, res: Response) => {
-    console.error('Unhandled Error', err);
-
-    if (err instanceof AppError && err.isOperational){
-        res.status(err.statusCode).json(
-            errorResponse(err.message, err.constructor.name.replace('Error','').toUpperCase())
-        )
-        return;
-
-    }
-
-    //Generic error handler 
-    res.status(500).json(
-        errorResponse(
-            env.NODE_ENV === 'development' ? err.message : 'Internal server error', 
-            'INTERNAL ERROR'
-        )
-    );
-});
+// Global error handler — must be registered after all routes.
+app.use(errorHandler);
 
 const PORT = env.PORT;
 

@@ -95,7 +95,53 @@ export async function createProviderProfile(
 
 }
 
+//Get provider profile by user id using userId
+export async function getProviderProfileByUserId(userId: string) {
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+        select: {
+            id: true,
+            role: true,
+        },
+    });
 
+    if (!user) {
+        throw new NotFoundError('User not found');
+    }
+
+    if (user.role !== 'PROVIDER') {
+        throw new ForbiddenError(
+            'Only providers can access provider profiles',
+        );
+    }
+
+    return prisma.providerProfile.findUnique({
+        where: {
+            userId,
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    role: true,
+                },
+            },
+            category: {
+                select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                },
+            },
+        },
+    });
+}
+
+
+//Update provider profile by user id using userId and provider id
 export async function updateProviderProfile(
     userId: string,
     providerId: string,

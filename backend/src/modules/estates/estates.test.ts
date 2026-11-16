@@ -119,7 +119,7 @@ describe('GET /api/v1/estates/list', () => {
         expect(response.body.data.length).toBeGreaterThan(0);
         
         // Robust: check the array contains BOTH estates, not index 0
-        const names = response.body.data.map((e: any) => e.name)
+        const names = response.body.data.map((e: { name: string }) => e.name)
         expect(names).toContain('Kilimani Heights')   // from the POST test
         expect(names).toContain('Westlands View')      // from this seed
     

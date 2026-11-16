@@ -1,6 +1,66 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+export async function GET() {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("njirani_access")?.value;
+
+  if (!accessToken) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Your session has expired. Please sign in again.",
+      },
+      { status: 401 },
+    );
+  }
+
+  const backendUrl =
+    process.env.BACKEND_URL ?? "http://localhost:3000";
+
+  try {
+    const response = await fetch(
+      `${backendUrl}/api/providers/me`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: "no-store",
+      },
+    );
+
+    const responseText = await response.text();
+
+    let responseBody: unknown;
+
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "The server returned an unexpected response.",
+        },
+        { status: 502 },
+      );
+    }
+
+    return NextResponse.json(responseBody, {
+      status: response.status,
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to reach the server. Please try again.",
+      },
+      { status: 502 },
+    );
+  }
+}
+
+
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("njirani_access")?.value;
@@ -75,3 +135,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

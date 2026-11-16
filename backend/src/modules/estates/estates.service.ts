@@ -1,4 +1,5 @@
 import prisma from "../../config/database.js";
+import { Prisma } from "../../generated/prisma/index.js";
 import { EstateInput } from "./estates.schema.js";
 import { ConflictError, UnauthorizedError } from "../../utils/errors.js";
 
@@ -60,7 +61,7 @@ export async function getEstates(filters: {
     const limit = Math.min(50, Math.max(1, filters.limit ?? 20));
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.EstateWhereInput = {};
     if (filters.search) {
         where.name = { contains: filters.search, mode: 'insensitive' };
     }

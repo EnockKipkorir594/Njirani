@@ -16,7 +16,7 @@ export default function ProviderLoginPage() {
   const [passwordError, setPasswordError] = useState("");
   const [serverError, setServerError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   const router = useRouter();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -44,29 +44,107 @@ export default function ProviderLoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      // 1. Authenticate the provider.
+      // The API route sets the HTTP-only authentication cookies.
+      const loginResponse = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           email: normalizedEmail,
           password,
         }),
       });
 
-      const result = await response.json();
+      const loginResult = await loginResponse.json();
 
-      if (!response.ok || !result.success) {
+      if (!loginResponse.ok || loginResult.success !== true) {
         setServerError(
-          result.error?.message ??
-            result.message ??
+          loginResult.error?.message ??
+            loginResult.message ??
             "Login failed. Check your credentials and try again.",
         );
         return;
       }
 
-      router.push("/provider/profile/create");
-      router.refresh();
+      // 2. Retrieve the authenticated provider's profile.
+      // The browser does not supply a user ID or access token.
+      const profileResponse = await fetch("/api/providers/profile", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      let profileResult: unknown;
+
+      try {
+        profileResult = await profileResponse.json();
+      } catch {
+        setServerError(
+          "Unable to verify your provider profile. Please try again.",
+        );
+        return;
+      }
+
+      // 3. Reject failed or malformed profile responses.
+      if (
+        !profileResponse.ok ||
+        typeof profileResult !== "object" ||
+        profileResult === null
+      ) {
+        setServerError(
+          "Unable to verify your provider profile. Please try again.",
+        );
+        return;
+      }
+
+      const profilePayload = profileResult as {
+        success?: unknown;
+        message?: unknown;
+        data?: unknown;
+      };
+
+      if (
+        profilePayload.success !== true ||
+        typeof profilePayload.data !== "object" ||
+        profilePayload.data === null ||
+        !Object.prototype.hasOwnProperty.call(
+          profilePayload.data,
+          "profile",
+        )
+      ) {
+        setServerError(
+          typeof profilePayload.message === "string"
+            ? profilePayload.message
+            : "Unable to verify your provider profile. Please try again.",
+        );
+        return;
+      }
+
+      const profile = (
+        profilePayload.data as { profile: unknown }
+      ).profile;
+
+      if (
+        profile !== null &&
+        (typeof profile !== "object" || Array.isArray(profile))
+      ) {
+        setServerError(
+          "The server returned an invalid provider profile.",
+        );
+        return;
+      }
+
+      // 4. Choose the correct destination.
+      const destination =
+        profile === null
+          ? "/provider/profile/create"
+          : "/provider/dashboard";
+
       setPassword("");
+
+      router.replace(destination);
+      router.refresh();
     } catch {
       setServerError(
         "Unable to connect to the server. Please try again.",
@@ -94,71 +172,50 @@ export default function ProviderLoginPage() {
         </div>
 
         <Card variant="elevated">
-          {isLoggedIn ? (
-            <div className="space-y-4 text-center" role="status">
-              <h2 className="font-heading text-xl font-bold">
-                Login successful
-              </h2>
-
-              <p className="text-sm text-surface-muted-text">
-                You are signed in. Provider profile setup is the next
-                step; this page will be connected to it once that
-                feature is implemented.
-              </p>
-
-              <Link
-                href="/"
-                className="inline-block font-semibold text-brand-600 underline-offset-4 hover:underline"
+          <form onSubmit={handleSubmit} noValidate className="space-y-5">
+            {serverError && (
+              <div
+                role="alert"
+                className="rounded-xl border border-error bg-error/5 p-4 text-sm text-error"
               >
-                Return home
-              </Link>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} noValidate className="space-y-5">
-              {serverError && (
-                <div
-                  role="alert"
-                  className="rounded-xl border border-error bg-error/5 p-4 text-sm text-error"
-                >
-                  {serverError}
-                </div>
-              )}
+                {serverError}
+              </div>
+            )}
 
-              <FormField
-                id="email"
-                label="Email address"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                error={emailError}
-                required
-                disabled={isSubmitting}
-              />
+            <FormField
+              id="email"
+              label="Email address"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              error={emailError}
+              required
+              disabled={isSubmitting}
+            />
 
-              <FormField
-                id="password"
-                label="Password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                error={passwordError}
-                required
-                disabled={isSubmitting}
-              />
+            <FormField
+              id="password"
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              error={passwordError}
+              required
+              disabled={isSubmitting}
+            />
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Signing in..." : "Sign in"}
-              </Button>
-            </form>
-          )}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Signing in..." : "Sign in"}
+            </Button>
+          </form>
         </Card>
 
         <p className="mt-6 text-center text-sm text-surface-muted-text">
@@ -174,3 +231,4 @@ export default function ProviderLoginPage() {
     </main>
   );
 }
+

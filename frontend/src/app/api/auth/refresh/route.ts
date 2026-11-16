@@ -44,7 +44,46 @@ export async function POST(_request: NextRequest) {
     });
 
     const responseText = await backendResponse.text();
+    // Handle HTTP errors before attempting to parse the response body.
+    if (!backendResponse.ok) {
+      let message =
+        "Unable to refresh your session. Please try again.";
 
+      try {
+        const errorResult = JSON.parse(responseText) as {
+          message?: string;
+        };
+
+        if (typeof errorResult.message === "string") {
+          message = errorResult.message;
+        }
+      } catch {
+        // The backend may return HTML or another non-JSON error response.
+      }
+
+      const isAuthenticationFailure =
+        backendResponse.status === 401 ||
+        backendResponse.status === 403;
+
+      const response = NextResponse.json(
+        {
+          success: false,
+          message: isAuthenticationFailure
+            ? "Your session has expired. Please sign in again."
+            : message,
+        },
+        { status: backendResponse.status },
+      );
+
+      if (isAuthenticationFailure) {
+        response.cookies.delete(ACCESS_COOKIE_NAME);
+        response.cookies.delete(REFRESH_COOKIE_NAME);
+      }
+
+      return response;
+    }
+
+    // Only successful backend responses should be parsed as session data.
     let result: Record<string, unknown>;
 
     try {
@@ -59,32 +98,16 @@ export async function POST(_request: NextRequest) {
       );
     }
 
-    // The backend rejected the refresh token.
-    if (!backendResponse.ok || result.success !== true) {
-      const message =
-        typeof result.message === "string"
-          ? result.message
-          : "Unable to refresh your session. Please sign in again.";
-
-      const response = NextResponse.json(
+    if (result.success !== true) {
+      return NextResponse.json(
         {
           success: false,
-          message,
+          message: "The authentication server returned an invalid response.",
         },
-        { status: backendResponse.status },
+        { status: 502 },
       );
-
-      // Only clear cookies when the backend rejects the refresh token.
-      if (
-        backendResponse.status === 401 ||
-        backendResponse.status === 403
-      ) {
-        response.cookies.delete(ACCESS_COOKIE_NAME);
-        response.cookies.delete(REFRESH_COOKIE_NAME);
-      }
-
-      return response;
     }
+
 
     const data = result.data as
       | {
@@ -147,7 +170,9 @@ export async function POST(_request: NextRequest) {
     });
 
     return response;
-  } catch {
+  }  catch (error) {
+    console.error("[AUTH_REFRESH] Unexpected error:", error);
+  
     return NextResponse.json(
       {
         success: false,
