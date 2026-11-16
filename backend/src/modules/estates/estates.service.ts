@@ -61,7 +61,7 @@ export async function getEstates(filters: {
     const limit = Math.min(50, Math.max(1, filters.limit ?? 20));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.estateWhereInput = {};
+    const where: Prisma.EstateWhereInput = {};
     if (filters.search) {
         where.name = { contains: filters.search, mode: 'insensitive' };
     }
