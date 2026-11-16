@@ -1,9 +1,39 @@
-import { createProviderProfile, updateProviderProfile, listProviderProfiles,listServiceCategories} from "./providers.service.js"
+import { createProviderProfile, getProviderProfileByUserId, updateProviderProfile, listProviderProfiles,listServiceCategories} from "./providers.service.js"
 import {  providerSchema, listProvidersQuerySchema, updateProviderSchema } from "./providers.schema.js"
 import { Request, Response, NextFunction } from "express"
 import { successResponse } from "../../utils/response.js";
 import { UnauthorizedError } from "../../utils/errors.js";
 
+
+//Get current provider profile by user id using userId
+export async function getCurrentProviderProfileHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+      if (!req.user) {
+          return next(
+              new UnauthorizedError('Authentication required'),
+          );
+      }
+
+      const profile = await getProviderProfileByUserId(
+          req.user.userId,
+      );
+
+      return res.status(200).json(
+          successResponse(
+              { profile },
+              'Provider profile retrieved successfully',
+          ),
+      );
+  } catch (error) {
+      return next(error);
+  }
+}
+
+//Create provider profile by user id using userId
 export async function createProviderHandler(
     req: Request<unknown, unknown, unknown, unknown>, // adjust if you have body types
     res: Response,
@@ -34,90 +64,90 @@ export async function createProviderHandler(
     }
   }
 
-  export async function updateProviderHandler(
-    req: Request<{ id : string }>,
-    res: Response,
-    next: NextFunction,
-  ) {
-    try {
-      // 1. Make sure the request is authenticated
-      if (!req.user) {
-        return next(
-          new UnauthorizedError('Authentication required'),
-        );
-      }
-  
-      // 2. Get the provider profile ID from the URL
-      const providerId = req.params.id;
-  
-      // 3. Validate the update body
-      const parsedBody = updateProviderSchema.parse(req.body);
-  
-      // 4. Pass authenticated user + target profile + validated data
-      //    to the service layer.
-      const profile = await updateProviderProfile(
-        req.user.userId,
-        providerId,
-        parsedBody,
-      );
-  
-      // 5. Return the updated provider profile
-      return res.status(200).json(
-        successResponse(
-          profile,
-          'Provider profile updated successfully',
-        ),
-      );
-    } catch (error) {
-      next(error);
-    }
-  }
-  
-  export async function listProvidersHandler(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) {
-    try {
-      // Validate/coerce query params
-      const query = listProvidersQuerySchema.parse(req.query);
-  
-      const result = await listProviderProfiles({
-        categoryId: query.categoryId,
-        categorySlug: query.categorySlug,
-        search: query.search,
-        page: query.page,
-        limit: query.limit,
-        sortBy: query.sortBy,
-        lat: query.lat,
-        lng: query.lng,
-        radiusKm: query.radiusKm,
-      });
-  
-      res.status(200).json(
-        successResponse(result.profiles, 'Provider profiles retrieved successfully', result.meta)
-      );
-    } catch (error) {
-      next(error);
-    }
-  }
-
-
-  export async function listServiceCategoriesHandler(
-    _req: Request,
-    res: Response,
-    next: NextFunction,
+export async function updateProviderHandler(
+  req: Request<{ id : string }>,
+  res: Response,
+  next: NextFunction,
 ) {
-    try {
-        const categories = await listServiceCategories();
-
-        return res.status(200).json(
-            successResponse(
-                categories,
-                'Service categories retrieved successfully',
-            ),
-        );
-    } catch (error) {
-        return next(error);
+  try {
+    // 1. Make sure the request is authenticated
+    if (!req.user) {
+      return next(
+        new UnauthorizedError('Authentication required'),
+      );
     }
+
+    // 2. Get the provider profile ID from the URL
+    const providerId = req.params.id;
+
+    // 3. Validate the update body
+    const parsedBody = updateProviderSchema.parse(req.body);
+
+    // 4. Pass authenticated user + target profile + validated data
+    //    to the service layer.
+    const profile = await updateProviderProfile(
+      req.user.userId,
+      providerId,
+      parsedBody,
+    );
+
+    // 5. Return the updated provider profile
+    return res.status(200).json(
+      successResponse(
+        profile,
+        'Provider profile updated successfully',
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listProvidersHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    // Validate/coerce query params
+    const query = listProvidersQuerySchema.parse(req.query);
+
+    const result = await listProviderProfiles({
+      categoryId: query.categoryId,
+      categorySlug: query.categorySlug,
+      search: query.search,
+      page: query.page,
+      limit: query.limit,
+      sortBy: query.sortBy,
+      lat: query.lat,
+      lng: query.lng,
+      radiusKm: query.radiusKm,
+    });
+
+    res.status(200).json(
+      successResponse(result.profiles, 'Provider profiles retrieved successfully', result.meta)
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+export async function listServiceCategoriesHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+      const categories = await listServiceCategories();
+
+      return res.status(200).json(
+          successResponse(
+              categories,
+              'Service categories retrieved successfully',
+          ),
+      );
+  } catch (error) {
+      return next(error);
+  }
 }
