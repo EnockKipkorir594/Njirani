@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
+import ResidentBookings from "./ResidentBookings";
 
 export default async function ResidentDashboardPage() {
   const user = await getCurrentUser();
@@ -34,7 +35,7 @@ export default async function ResidentDashboardPage() {
           </p>
         </section>
 
-        <section className="grid gap-6 md:grid-cols-2">
+        <section>
           <Card variant="elevated">
             <div className="space-y-3">
               <h2 className="font-heading text-xl font-bold text-foreground">
@@ -51,25 +52,9 @@ export default async function ResidentDashboardPage() {
               </p>
             </div>
           </Card>
-
-          <Card variant="elevated">
-            <div className="space-y-3">
-              <h2 className="font-heading text-xl font-bold text-foreground">
-                Your bookings
-              </h2>
-
-              <p className="text-sm text-surface-muted-text">
-                View your service requests and follow their
-                progress from submission to completion.
-              </p>
-
-              <p className="text-sm font-semibold text-brand-600">
-                Booking information will appear here in the
-                next implementation stage.
-              </p>
-            </div>
-          </Card>
         </section>
+
+        <ResidentBookings />
 
         <section>
           <Card>
@@ -86,7 +71,7 @@ export default async function ResidentDashboardPage() {
 
               <Link
                 href="/"
-                className="text-sm font-semibold text-brand-600 underline-offset-4 hover:underline"
+                className="text-sm font-semibold text-brand-600 hover:text-brand-700"
               >
                 Back to homepage
               </Link>
@@ -97,3 +82,4 @@ export default async function ResidentDashboardPage() {
     </main>
   );
 }
+
