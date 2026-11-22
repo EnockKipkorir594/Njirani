@@ -23,22 +23,33 @@ interface AuthMeResponse {
   };
 }
 
+
+export type CurrentUserResult =
+  | {
+      status: "authenticated";
+      user: AuthenticatedUser;
+    }
+  | {
+      status: "unauthenticated";
+    }
+  | {
+      status: "unavailable";
+    };
+
 const ACCESS_COOKIE_NAME = "njirani_access";
 
-export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
+export async function getCurrentUserResult(): Promise<CurrentUserResult> {
   try {
-    // Read the HTTP-only access token on the server.
     const cookieStore = await cookies();
     const accessToken = cookieStore.get(ACCESS_COOKIE_NAME)?.value;
 
     if (!accessToken) {
-      return null;
+      return { status: "unauthenticated" };
     }
 
     const backendUrl =
       process.env.BACKEND_URL ?? "http://localhost:3000";
 
-    // Ask the backend to validate the token and retrieve the user.
     const response = await fetch(`${backendUrl}/auth/me`, {
       method: "GET",
       headers: {
@@ -47,8 +58,12 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
       cache: "no-store",
     });
 
+    if (response.status === 401 || response.status === 403) {
+      return { status: "unauthenticated" };
+    }
+
     if (!response.ok) {
-      return null;
+      return { status: "unavailable" };
     }
 
     const result = (await response.json()) as AuthMeResponse;
@@ -57,11 +72,21 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
       result.success !== true ||
       !result.data?.user
     ) {
-      return null;
+      return { status: "unavailable" };
     }
 
-    return result.data.user;
+    return {
+      status: "authenticated",
+      user: result.data.user,
+    };
   } catch {
-    return null;
+    return { status: "unavailable" };
   }
+}
+
+// Backward-compatible helper for existing server pages.
+export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
+  const result = await getCurrentUserResult();
+
+  return result.status === "authenticated" ? result.user : null;
 }

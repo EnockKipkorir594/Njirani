@@ -1,20 +1,46 @@
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUserResult } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
 import ResidentBookings from "./ResidentBookings";
 
 export default async function ResidentDashboardPage() {
-  const user = await getCurrentUser();
+  const result = await getCurrentUserResult();
 
-  if (!user) {
+  if (result.status === "unauthenticated") {
     redirect("/resident/login");
   }
 
+  if (result.status === "unavailable") {
+    return (
+      <main className="min-h-[calc(100vh-5rem)] bg-surface px-4 py-12">
+        <div className="mx-auto max-w-2xl">
+          <Card>
+            <h1 className="font-heading text-xl font-bold text-foreground">
+              Unable to verify your session
+            </h1>
+
+            <p className="mt-2 text-sm text-surface-muted-text">
+              We couldn't reach the authentication service.
+              Please try again shortly.
+            </p>
+          </Card>
+        </div>
+      </main>
+    );
+  }
+
+  const user = result.user;
+
   if (user.role !== "RESIDENT") {
     redirect("/");
+  }
+
+  if (!user.estateId) {
+    redirect("/resident/estate-selection");
   }
 
   return (
@@ -54,7 +80,15 @@ export default async function ResidentDashboardPage() {
           </Card>
         </section>
 
-        <ResidentBookings />
+        <Suspense fallback={
+          <Card>
+            <p className="text-sm text-surface-muted-text">
+              Loading your bookings...
+            </p>
+          </Card>
+        }>
+          <ResidentBookings />
+        </Suspense>
 
         <section>
           <Card>

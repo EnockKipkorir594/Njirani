@@ -1,7 +1,7 @@
 import prisma from "../../config/database.js";
 import { Prisma } from "../../generated/prisma/index.js";
 import { EstateInput } from "./estates.schema.js";
-import { ConflictError, UnauthorizedError } from "../../utils/errors.js";
+import { ConflictError, UnauthorizedError, NotFoundError, ForbiddenError } from "../../utils/errors.js";
 
 
 export async function createEstate(data: EstateInput){
@@ -87,3 +87,93 @@ export async function getEstates(filters: {
     };
 }
 
+export async function assignResidentEstate(
+    residentId: string,
+    estateId: string
+) {
+    // Confirm that the selected estate exists.
+    const estate = await prisma.estate.findUnique({
+        where: { id: estateId },
+        select: { id: true, name: true },
+    });
+
+    if (!estate) {
+        throw new NotFoundError('Estate not found');
+    }
+
+    // Confirm that the authenticated user exists and is a resident.
+    const resident = await prisma.user.findUnique({
+        where: { id: residentId },
+        select: {
+            id: true,
+            role: true,
+            estateId: true,
+        },
+    });
+
+    if (!resident) {
+        throw new NotFoundError('Resident not found');
+    }
+
+    if (resident.role !== 'RESIDENT') {
+        throw new ForbiddenError('Only residents can select an estate');
+    }
+
+    if (resident.estateId !== null) {
+        throw new ConflictError(
+            'Resident already belongs to an estate'
+        );
+    }
+
+    // Atomically assign the estate only if the resident is still unassigned.
+    const result = await prisma.user.updateMany({
+        where: {
+            id: residentId,
+            role: 'RESIDENT',
+            estateId: null,
+        },
+        data: {
+            estateId,
+        },
+    });
+
+    if (result.count === 0) {
+        // Another request may have assigned the resident in the meantime.
+        const currentResident = await prisma.user.findUnique({
+            where: { id: residentId },
+            select: {
+                id: true,
+                role: true,
+                estateId: true,
+            },
+        });
+
+        if (!currentResident) {
+            throw new NotFoundError('Resident not found');
+        }
+
+        if (currentResident.role !== 'RESIDENT') {
+            throw new ForbiddenError(
+                'Only residents can select an estate'
+            );
+        }
+
+        throw new ConflictError(
+            'Resident already belongs to an estate'
+        );
+    }
+
+    return prisma.user.findUnique({
+        where: { id: residentId },
+        select: {
+            id: true,
+            estateId: true,
+            estate: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+        },
+    });
+}

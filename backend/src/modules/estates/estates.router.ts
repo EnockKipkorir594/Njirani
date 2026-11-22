@@ -1,5 +1,5 @@
 import { authenticate, requireRole } from "../../middleware/auth.middleware.js";
-import { createEstateHandler, getEstatesHandler } from "./estates.controller.js";
+import { createEstateHandler, getEstatesHandler, assignResidentEstateHandler } from "./estates.controller.js";
 import { Router } from "express";
 
 
@@ -10,6 +10,13 @@ estateRouter.post('/create', authenticate, requireRole(['ADMIN']), createEstateH
 
 //Get all estates 
 estateRouter.get('/list', getEstatesHandler)
+
+estateRouter.patch(
+    '/me',
+    authenticate,
+    requireRole(['RESIDENT']),
+    assignResidentEstateHandler
+);
 
 export default estateRouter;
 
