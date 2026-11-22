@@ -81,6 +81,98 @@ function formatScheduledAt(value: string) {
   }).format(date);
 }
 
+function BookingsSkeleton() {
+  return (
+    <section className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="font-heading text-2xl font-bold text-foreground">
+            Your bookings
+          </h2>
+          <p className="mt-1 text-sm text-surface-muted-text">
+            Track your service requests and their progress.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="booking-status-filter"
+            className="text-sm font-medium text-foreground"
+          >
+            Filter by status
+          </label>
+
+          <select
+            id="booking-status-filter"
+            disabled
+            className="rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-foreground"
+          >
+            <option value="ALL">All bookings</option>
+            <option value="PENDING">Awaiting provider</option>
+            <option value="CONFIRMED">Confirmed</option>
+            <option value="IN_PROGRESS">In progress</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} variant="elevated">
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="h-5 w-48 bg-surface-border/50 rounded animate-pulse" />
+                  <div className="mt-2 h-4 w-32 bg-surface-border/50 rounded animate-pulse" />
+                </div>
+
+                <div className="h-6 w-24 bg-surface-border/50 rounded-full animate-pulse" />
+              </div>
+
+              <div className="grid gap-3 text-sm sm:grid-cols-2">
+                <div>
+                  <div className="h-3 w-24 bg-surface-border/50 rounded animate-pulse" />
+                  <div className="mt-1 h-4 w-32 bg-surface-border/50 rounded animate-pulse" />
+                </div>
+
+                <div>
+                  <div className="h-3 w-20 bg-surface-border/50 rounded animate-pulse" />
+                  <div className="mt-1 h-4 w-28 bg-surface-border/50 rounded animate-pulse" />
+                </div>
+              </div>
+
+              <div>
+                <div className="h-3 w-32 bg-surface-border/50 rounded animate-pulse" />
+                <div className="mt-1 space-y-2">
+                  <div className="h-4 w-full bg-surface-border/50 rounded animate-pulse" />
+                  <div className="h-4 w-3/4 bg-surface-border/50 rounded animate-pulse" />
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-surface-muted-text">
+          Loading bookings...
+        </p>
+
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" disabled>
+            Previous
+          </Button>
+
+          <Button type="button" variant="secondary" disabled>
+            Next
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function ResidentBookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [page, setPage] = useState(1);
@@ -174,6 +266,10 @@ export default function ResidentBookings() {
     setPage(1);
   }
 
+  if (loading) {
+    return <BookingsSkeleton />;
+  }
+
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -212,15 +308,7 @@ export default function ResidentBookings() {
         </div>
       </div>
 
-      {loading && (
-        <Card>
-          <p className="text-sm text-surface-muted-text">
-            Loading your bookings...
-          </p>
-        </Card>
-      )}
-
-      {!loading && error && (
+      {error && (
         <Card>
           <div className="space-y-4">
             <p className="text-sm text-red-600">{error}</p>
@@ -241,7 +329,7 @@ export default function ResidentBookings() {
         </Card>
       )}
 
-      {!loading && !error && bookings.length === 0 && (
+      {!error && bookings.length === 0 && (
         <Card>
           <div className="space-y-2">
             <h3 className="font-heading text-lg font-bold text-foreground">
@@ -256,7 +344,7 @@ export default function ResidentBookings() {
         </Card>
       )}
 
-      {!loading && !error && bookings.length > 0 && (
+      {!error && bookings.length > 0 && (
         <>
           <div className="space-y-4">
             {bookings.map((booking) => (

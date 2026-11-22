@@ -36,5 +36,14 @@ export const listEstatesQuerySchema = z.object({
     search: z.string().optional(),
 });
 
+export const assignResidentEstateSchema = z.strictObject({
+    estateId: z.string().uuid('A valid estate ID is required'),
+});
+
+
 export type ListstateInput = z.infer< typeof listEstatesQuerySchema >;
 export type EstateInput = z.infer< typeof estateSchema>;
+export type AssignResidentEstateInput = z.infer<
+    typeof assignResidentEstateSchema
+>;
+
